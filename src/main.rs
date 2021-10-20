@@ -52,7 +52,8 @@ fn extract_data_from_csv() -> Result<HashMap<String, Vec<ClickTrace>>, Box<dyn E
 
         if prev_client != record.client_id && !prev_client.is_empty() {
             if click_traces_list.len() >= CLICK_TRACE_MIN_NUM {
-                client_to_click_traces_map.insert(record.client_id.clone(), click_traces_list.clone());
+                client_to_click_traces_map
+                    .insert(record.client_id.clone(), click_traces_list.clone());
                 click_traces_list.clear();
             }
         }
@@ -121,11 +122,10 @@ fn get_train_data<R: Rng>(
     for (client_id, click_traces_list) in client_to_click_traces_map.into_iter() {
         let len = click_traces_list.len();
         let split_idx = len / 2;
-        let distr = Uniform::new(0, split_idx);
-        let sampled_idx: Vec<usize> = distr
-            .sample_iter(&mut rng)
-            .take(sample_session_size)
-            .collect();
+        let idx_list: Vec<usize> = (0..split_idx).collect();
+        let sampled_idx = idx_list
+            .into_iter()
+            .choose_multiple(rng, sample_session_size);
         client_to_sample_idx_map.insert(client_id.to_string(), sampled_idx);
     }
     return client_to_sample_idx_map;
