@@ -18,8 +18,8 @@ const FILE_PATH: &str = "/Users/fjohn/Documents/temp/test.csv";
 const DELAY_LIMIT: f64 = 1800.0;
 const CLICK_TRACE_MAX_LEN: usize = 100;
 const CLICK_TRACE_MIN_LEN: usize = 1;
-const SAMPLE_CLIENT_NUM: usize = 2;
-const SAMPLE_SESSION_NUM: usize = 2;
+const SAMPLE_CLIENT_NUM: usize = 10;
+const SAMPLE_SESSION_NUM: usize = 3;
 const CLICK_TRACE_MIN_NUM: usize = 2 * SAMPLE_SESSION_NUM + 1;
 const SEED: u64 = 0;
 
@@ -30,7 +30,7 @@ fn extract_data_from_csv() -> Result<HashMap<String, Vec<ClickTrace>>, Box<dyn E
     let mut location_set: IndexSet<String> = IndexSet::new();
     let mut category_set: IndexSet<String> = IndexSet::new();
 
-    // Retrieve number of unique values for all data fields 
+    // Retrieve number of unique values for all data fields
     for result in reader.deserialize() {
         let record: Record = result?;
         website_set.insert(record.website);
@@ -40,7 +40,9 @@ fn extract_data_from_csv() -> Result<HashMap<String, Vec<ClickTrace>>, Box<dyn E
     }
 
     let mut prev_time: f64 = 0.0;
+    let mut prev_client = String::new();
     let mut client_to_click_traces_map: HashMap<String, Vec<ClickTrace>> = HashMap::new();
+    let mut click_traces_list: Vec<ClickTrace> = Vec::new();
     let mut click_trace_len: usize = 0;
 
     let mut reader = csv::Reader::from_path(&FILE_PATH)?;
@@ -48,13 +50,12 @@ fn extract_data_from_csv() -> Result<HashMap<String, Vec<ClickTrace>>, Box<dyn E
     for result in reader.deserialize() {
         let record: Record = result?;
 
-        if !client_to_click_traces_map.contains_key(&record.client_id) {
-            client_to_click_traces_map.insert(record.client_id.clone(), Vec::new());
+        if prev_client != record.client_id && !prev_client.is_empty() {
+            if click_traces_list.len() >= CLICK_TRACE_MIN_NUM {
+                client_to_click_traces_map.insert(record.client_id.clone(), click_traces_list.clone());
+                click_traces_list.clear();
+            }
         }
-
-        let click_traces_list = client_to_click_traces_map
-            .get_mut(&record.client_id)
-            .unwrap();
 
         if click_traces_list.is_empty()
             || click_traces_list.len() >= CLICK_TRACE_MAX_LEN
@@ -82,6 +83,7 @@ fn extract_data_from_csv() -> Result<HashMap<String, Vec<ClickTrace>>, Box<dyn E
         current_click_trace.category[category_set.get_full(&record.category).unwrap().0] += 1;
 
         prev_time = record.timestamp;
+        prev_client = record.client_id;
         click_trace_len += 1;
     }
 

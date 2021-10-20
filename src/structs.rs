@@ -10,7 +10,7 @@ pub struct Record {
     pub category: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ClickTrace {
     pub website: Vec<u32>,
     pub code: Vec<u32>,
