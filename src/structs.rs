@@ -1,5 +1,4 @@
 use serde::Deserialize;
-use std::collections::HashMap;
 
 #[derive(Debug, Deserialize)]
 pub struct Record {
@@ -13,18 +12,10 @@ pub struct Record {
 
 #[derive(Debug)]
 pub struct ClickTrace {
-    pub website: HashMap<String, u64>,
-    pub code: HashMap<String, u64>,
-    pub location: HashMap<String, u64>,
-    pub category: HashMap<String, u64>,
-}
-
-#[derive(Debug)]
-pub struct ClickTraceVectorized {
-    pub website: Vec<u64>,
-    pub code: Vec<u64>,
-    pub location: Vec<u64>,
-    pub category: Vec<u64>,
+    pub website: Vec<u32>,
+    pub code: Vec<u32>,
+    pub location: Vec<u32>,
+    pub category: Vec<u32>,
 }
 
 
