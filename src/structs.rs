@@ -1,5 +1,5 @@
 use serde::Deserialize;
-use ndarray::{Array, ArrayBase, array};
+use std::collections::HashMap;
 
 #[derive(Debug, Deserialize)]
 pub struct Record {
@@ -13,10 +13,18 @@ pub struct Record {
 
 #[derive(Debug, Clone)]
 pub struct ClickTrace {
-    pub website: Vec<i32>,
-    pub code: Vec<i32>,
-    pub location: Vec<i32>,
-    pub category: Vec<i32>,
+    pub website: HashMap<String, u32>,
+    pub code: HashMap<String, u32>,
+    pub location: HashMap<String, u32>,
+    pub category: HashMap<String, u32>,
 }
+
+#[derive(Debug)]
+ pub struct ClickTraceVectorized {
+     pub website: Vec<u32>,
+     pub code: Vec<u32>,
+     pub location: Vec<u32>,
+     pub category: Vec<u32>
+ }
 
 
