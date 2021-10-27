@@ -19,7 +19,7 @@ pub struct ClickTrace {
     pub category: HashMap<String, u32>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
  pub struct ClickTraceVectorized {
      pub website: Vec<u32>,
      pub code: Vec<u32>,

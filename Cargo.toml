@@ -13,4 +13,6 @@ seal = "0.1.1"
 rand = "0.8.4"
 ndarray = "0.15.1"
 rayon = "1.5.1"
-
+log = "0.4"
+env_logger = "0.8.4"
+rust-ini = "0.17"
