@@ -1,24 +1,23 @@
-pub mod structs;
-pub mod utils;
+pub mod maths;
 pub mod metrics;
 pub mod parse;
-pub mod maths;
+pub mod structs;
+pub mod utils;
 
 use std::collections::HashMap;
 use std::str::FromStr;
-
 
 use rayon::prelude::*;
 
 use rand::{rngs::StdRng, SeedableRng};
 use rand::{seq::IteratorRandom, Rng};
 
-use structs::{ClickTrace, ClickTraceVectorized};
 use parse::DataFields;
+use structs::{ClickTrace, ClickTraceVectorized};
 
-use metrics::{DistanceMetrics};
+use metrics::DistanceMetrics;
 
-use ini::{Ini, ParseError, Properties};
+use ini::{Ini, Properties};
 
 
 fn main() {
@@ -31,24 +30,35 @@ fn main() {
     let seed = conf.get("seed").unwrap().parse::<u64>().unwrap();
     let mut rng = StdRng::seed_from_u64(seed);
 
-    let client_to_histogram_map: HashMap<u32, Vec<ClickTrace>> = parse::parse_to_histogram(conf).unwrap();
+    let client_to_histogram_map: HashMap<u32, Vec<ClickTrace>> =
+        parse::parse_to_histogram(conf).unwrap();
 
-    let client_sample_size = conf.get("client_sample_size").unwrap().parse::<usize>().unwrap();
+    let client_sample_size = conf
+        .get("client_sample_size")
+        .unwrap()
+        .parse::<usize>()
+        .unwrap();
     let client_to_target_idx_map: HashMap<u32, usize> =
         gen_test_data(&client_to_histogram_map, &mut rng, client_sample_size);
 
-    let click_trace_sample_size_per_client = conf.get("click_trace_sample_size_per_client").unwrap().parse::<usize>().unwrap();
-    let client_to_sample_idx_map: HashMap<u32, Vec<usize>> =
-        get_train_data(&client_to_histogram_map, &mut rng, click_trace_sample_size_per_client);
+    let click_trace_sample_size_per_client = conf
+        .get("click_trace_sample_size_per_client")
+        .unwrap()
+        .parse::<usize>()
+        .unwrap();
+    let client_to_sample_idx_map: HashMap<u32, Vec<usize>> = get_train_data(
+        &client_to_histogram_map,
+        &mut rng,
+        click_trace_sample_size_per_client,
+    );
 
-    eval(conf,
+    eval(
+        conf,
         &client_to_histogram_map,
         &client_to_target_idx_map,
         &client_to_sample_idx_map,
     );
 }
-
-
 
 // Sample a subset of clients and a target click trace that the evaluation is based upon
 fn gen_test_data<R: Rng>(
@@ -96,14 +106,19 @@ fn eval(
     client_to_target_idx_map: &HashMap<u32, usize>,
     client_to_sample_idx_map: &HashMap<u32, Vec<usize>>,
 ) {
-
-    let fields: Vec<DataFields> = conf.get("fields").unwrap().split(",").map(|x| DataFields::from_str(x).unwrap()).collect();
+    let fields: Vec<DataFields> = conf
+        .get("fields")
+        .unwrap()
+        .split(",")
+        .map(|x| DataFields::from_str(x).unwrap())
+        .collect();
     let metric = DistanceMetrics::from_str(conf.get("metric").unwrap()).unwrap();
 
     let result_list: Vec<(u32, u32)> = client_to_target_idx_map
         .par_iter()
         .map(|(client, target_idx)| {
-            eval_step(&fields,
+            eval_step(
+                &fields,
                 &metric,
                 client,
                 target_idx,
@@ -136,7 +151,6 @@ fn eval_step(
         .unwrap()
         .get(*target_idx)
         .unwrap();
-
 
     let mut lowest_dist = std::f64::INFINITY;
     let mut client_pred = 0;
@@ -183,21 +197,33 @@ fn compute_dist(
     target_click_trace: &ClickTraceVectorized,
     ref_click_trace: &ClickTraceVectorized,
 ) -> f64 {
-
     // Vector to store distance scores for each data field to be considered
     let mut total_dist = Vec::<f64>::with_capacity(fields.len());
 
     // Iterate over all data fields that are considered
     for field in fields.into_iter() {
         let (target_vector, ref_vector) = match field {
-            DataFields::Website => (target_click_trace.website.clone(), ref_click_trace.website.clone()),
-            DataFields::Code => (target_click_trace.code.clone(), ref_click_trace.code.clone()),
-            DataFields::Location => (target_click_trace.location.clone(), ref_click_trace.location.clone()),
-            DataFields::Category => (target_click_trace.category.clone(), ref_click_trace.category.clone())
+            DataFields::Website => (
+                target_click_trace.website.clone(),
+                ref_click_trace.website.clone(),
+            ),
+            DataFields::Code => (
+                target_click_trace.code.clone(),
+                ref_click_trace.code.clone(),
+            ),
+            DataFields::Location => (
+                target_click_trace.location.clone(),
+                ref_click_trace.location.clone(),
+            ),
+            DataFields::Category => (
+                target_click_trace.category.clone(),
+                ref_click_trace.category.clone(),
+            ),
         };
 
         let dist = match metric {
-            DistanceMetrics::Euclidean => metrics::euclidean_dist(&target_vector, &ref_vector)
+            DistanceMetrics::Euclidean => metrics::euclidean_dist(target_vector, ref_vector),
+            DistanceMetrics::Manhatten => metrics::manhatten_dist(target_vector, ref_vector),
         };
         total_dist.push(dist);
     }
