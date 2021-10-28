@@ -226,6 +226,11 @@ fn compute_dist(
         let dist = match metric {
             DistanceMetrics::Euclidean => metrics::euclidean_dist(target_vector, ref_vector),
             DistanceMetrics::Manhatten => metrics::manhatten_dist(target_vector, ref_vector),
+            DistanceMetrics::Cosine => metrics::consine_dist(target_vector, ref_vector),
+            DistanceMetrics::Jaccard => metrics::jaccard_dist(target_vector, ref_vector),
+            DistanceMetrics::Bhattacharyya => metrics::bhattacharyya_dist(target_vector, ref_vector),
+            DistanceMetrics::KullbrackLeibler => metrics::kullbrack_leibler_dist(target_vector, ref_vector),
+            DistanceMetrics::TotalVariation => metrics::total_varation_dist(target_vector, ref_vector)
         };
         total_dist.push(dist);
     }
