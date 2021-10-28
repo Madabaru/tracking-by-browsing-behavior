@@ -1,11 +1,9 @@
-
 use crate::structs::{ClickTrace, ClickTraceVectorized};
 
 use std::collections::HashMap;
 use std::iter::FromIterator;
 
 use indexmap::set::IndexSet;
-
 
 pub fn gen_vector(type_to_freq_map: &HashMap<String, u32>, set: &IndexSet<String>) -> Vec<u32> {
     let mut vector: Vec<u32> = vec![0; set.len()];
@@ -14,7 +12,6 @@ pub fn gen_vector(type_to_freq_map: &HashMap<String, u32>, set: &IndexSet<String
     }
     vector
 }
-
 
 pub fn vectorize_histogram(
     click_trace: &ClickTrace,
@@ -34,16 +31,22 @@ pub fn vectorize_histogram(
         location: location_vector,
         category: category_vector,
     };
-    return click_trace_vectorized;
+    click_trace_vectorized
 }
 
-
-pub fn get_unique_sets(target_histogram: &ClickTrace, sampled_histograms: &Vec<&ClickTrace>) -> (IndexSet<String>, IndexSet<String>, IndexSet<String>, IndexSet<String>) {
-
-    let mut website_vector: Vec<String>= target_histogram.website.keys().cloned().collect();
-    let mut code_vector: Vec<String>= target_histogram.code.keys().cloned().collect();
-    let mut location_vector: Vec<String>= target_histogram.location.keys().cloned().collect();
-    let mut category_vector: Vec<String>= target_histogram.category.keys().cloned().collect();
+pub fn get_unique_sets(
+    target_histogram: &ClickTrace,
+    sampled_histograms: &Vec<&ClickTrace>,
+) -> (
+    IndexSet<String>,
+    IndexSet<String>,
+    IndexSet<String>,
+    IndexSet<String>,
+) {
+    let mut website_vector: Vec<String> = target_histogram.website.keys().cloned().collect();
+    let mut code_vector: Vec<String> = target_histogram.code.keys().cloned().collect();
+    let mut location_vector: Vec<String> = target_histogram.location.keys().cloned().collect();
+    let mut category_vector: Vec<String> = target_histogram.category.keys().cloned().collect();
 
     for histogram in sampled_histograms.into_iter() {
         website_vector.extend(histogram.website.keys().cloned());

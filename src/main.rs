@@ -20,6 +20,7 @@ use metrics::DistanceMetrics;
 use ini::{Ini, Properties};
 
 
+
 fn main() {
 
     // Load config file
@@ -161,8 +162,9 @@ fn eval_step(
             .into_iter()
             .map(|idx| click_traces.get(*idx).unwrap())
             .collect::<Vec<&ClickTrace>>();
-        let (website_set, code_set, location_set, category_set) =
-            utils::get_unique_sets(&target_histogram, &sampled_histograms);
+
+            let (website_set, code_set, location_set, category_set) =
+                utils::get_unique_sets(&target_histogram, &sampled_histograms);
 
         let vectorized_target = utils::vectorize_histogram(
             target_histogram,

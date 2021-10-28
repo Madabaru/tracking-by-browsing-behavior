@@ -1,20 +1,20 @@
 use std::collections::HashMap;
+use std::error::Error;
 use std::str::FromStr;
 use std::string::ParseError;
-use std::error::Error;
 
 use ini::Properties;
 
 use crate::structs::ClickTrace;
 use crate::structs::Record;
 
+#[derive(PartialEq)]
 pub enum DataFields {
     Website,
     Code,
     Location,
-    Category
+    Category,
 }
-
 
 impl FromStr for DataFields {
     type Err = ParseError;
@@ -24,17 +24,30 @@ impl FromStr for DataFields {
             "code" => Ok(Self::Code),
             "location" => Ok(Self::Location),
             "category" => Ok(Self::Category),
-            x => panic!("Problem opening the file: {:?}", x)
+            x => panic!("wrong data field supplied: {:?}", x),
         }
     }
 }
 
-
-pub fn parse_to_histogram(conf: &Properties) -> Result<HashMap<u32, Vec<ClickTrace>>, Box<dyn Error>> {
+pub fn parse_to_histogram(
+    conf: &Properties,
+) -> Result<HashMap<u32, Vec<ClickTrace>>, Box<dyn Error>> {
     let path = conf.get("path").unwrap();
-    let max_click_trace_len = conf.get("max_cick_tace_len").unwrap().parse::<usize>().unwrap();
-    let min_click_trace_len = conf.get("min_click_trace_len").unwrap().parse::<usize>().unwrap();
-    let min_num_click_traces = conf.get("min_num_click_traces").unwrap().parse::<usize>().unwrap();
+    let max_click_trace_len = conf
+        .get("max_cick_tace_len")
+        .unwrap()
+        .parse::<usize>()
+        .unwrap();
+    let min_click_trace_len = conf
+        .get("min_click_trace_len")
+        .unwrap()
+        .parse::<usize>()
+        .unwrap();
+    let min_num_click_traces = conf
+        .get("min_num_click_traces")
+        .unwrap()
+        .parse::<usize>()
+        .unwrap();
     let delay_limit = conf.get("delay_limit").unwrap().parse::<f64>().unwrap();
 
     let mut prev_time: f64 = 0.0;

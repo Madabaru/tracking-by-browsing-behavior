@@ -1,6 +1,6 @@
 use nalgebra::MatrixXx1;
 
-// Create vector of zeros 
+// Create vector of zeros
 pub fn zeros(size: usize) -> Vec<i32> {
     vec![0; size]
 }
