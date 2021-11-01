@@ -15,7 +15,7 @@ pub enum DistanceMetrics {
     Bhattacharyya,
     KullbrackLeibler,
     TotalVariation,
-    // Matusita
+    JeffriesMatusita,
 }
 
 impl FromStr for DistanceMetrics {
@@ -29,6 +29,7 @@ impl FromStr for DistanceMetrics {
             "bhattacharyya" => Ok(Self::Bhattacharyya),
             "kullbrack_leibler" => Ok(Self::KullbrackLeibler),
             "total_variation" => Ok(Self::TotalVariation),
+            "jeffries_matusita" => Ok(Self::JeffriesMatusita),
             x => panic!("Problem opening the file: {:?}", x),
         }
     }
@@ -79,6 +80,7 @@ pub fn jaccard_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
     dist
 }
 
+// TODO: Normalize?
 pub fn bhattacharyya_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
     let sq_sum = target_vec
         .into_iter()
@@ -88,16 +90,19 @@ pub fn bhattacharyya_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
     -f64::log10(sq_sum)
 }
 
-// WIP
+// TODO: Normalize?
 pub fn kullbrack_leibler_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
-    let dist = target_vec
+    let eps  = f64::EPSILON;
+    let dist: f64 = target_vec
         .into_iter()
         .zip(ref_vec)
-        .map(|(a, b)| a as f64 * f64::log10(b as f64 / a as f64))
+        .map(|(a, b)| a as f64 * f64::log10(b as f64 / (a as f64 + eps)))
         .sum();
-    dist
+    println!("{:?}", dist);
+    -dist
 }
 
+// TODO: Normalize?
 pub fn total_varation_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
     let dist = target_vec
         .into_iter()
@@ -108,6 +113,34 @@ pub fn total_varation_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
     dist as f64
 }
 
-pub fn matusita_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
-    0.0
+// TODO: Normalize?
+pub fn jeffries_matusita_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
+
+    let target_vec = vec![1, 2, 3];
+    let ref_vec = vec![2, 3, 2];
+
+    let target_matrix = maths::vec_to_matrix(target_vec, true);
+    let ref_matrix = maths::vec_to_matrix(ref_vec, true);
+    
+    let sq_sum = target_matrix.zip_fold(&ref_matrix, 0.0, |acc, a, b| {
+        let sq = (a * b).sqrt();
+        acc + sq
+    });
+    let dist: f64 = (2.0 * (1.0 - sq_sum)).sqrt();
+    dist
+
+    // m1.zip_fold(m2, T::SimdRealField::zero(), |acc, a, b| {
+    //     let diff = a - b;
+    //     acc + diff.simd_modulus_squared()
+    // })
+    // .simd_sqrt()
+
+
+    // let sq_sum: f64 = target_vec
+    //     .into_iter()
+    //     .zip(ref_vec)
+    //     .map(|(a, b)| (a as f64 * b as f64).sqrt())
+    //     .sum();
+    // let dist: f64 = (2.0 * (1.0 - sq_sum)).sqrt();
+    // dist
 }

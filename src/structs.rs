@@ -17,6 +17,12 @@ pub struct ClickTrace {
     pub code: HashMap<String, u32>,
     pub location: HashMap<String, u32>,
     pub category: HashMap<String, u32>,
+    pub hour: Vec<u32>,
+    pub day: Vec<u32>,
+    pub start_time: f64,
+    pub end_time: f64
+
+
 }
 
 #[derive(Debug, Clone)]

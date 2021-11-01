@@ -1,9 +1,15 @@
 use nalgebra::MatrixXx1;
 
 // Create vector of zeros
-pub fn zeros(size: usize) -> Vec<i32> {
+pub fn zeros_i32(size: usize) -> Vec<i32> {
     vec![0; size]
 }
+
+// Create vector of zeros
+pub fn zeros_u32(size: usize) -> Vec<u32> {
+    vec![0; size]
+}
+
 
 pub fn vec_to_matrix(vec: Vec<u32>, norm: bool) -> MatrixXx1<f64> {
     let matrix = MatrixXx1::from_vec(vec);

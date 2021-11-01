@@ -2,11 +2,20 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::str::FromStr;
 use std::string::ParseError;
+use std::time::{UNIX_EPOCH, Duration};
+use std::convert::TryFrom;
+
+use chrono::prelude::DateTime;
+use chrono::{Timelike, Utc};
+use chrono::Datelike;
 
 use ini::Properties;
 
+use crate::maths;
 use crate::structs::ClickTrace;
 use crate::structs::Record;
+
+
 
 #[derive(PartialEq)]
 pub enum DataFields {
@@ -84,12 +93,27 @@ pub fn parse_to_histogram(
                 code: HashMap::new(),
                 location: HashMap::new(),
                 category: HashMap::new(),
+                hour: maths::zeros_u32(24),
+                day: maths::zeros_u32(7),
+                start_time: record.timestamp,
+                end_time: record.timestamp,
             };
             click_traces_list.push(click_trace);
             click_trace_len = 0;
         }
 
         let current_click_trace = click_traces_list.last_mut().unwrap();
+
+        // Extract day and hour from unix timestamp 
+        let date = UNIX_EPOCH + Duration::from_secs_f64(record.timestamp.clone());
+        let datetime = DateTime::<Utc>::from(date);
+        // Convert from u32 to usize
+        let hour_index: usize = usize::try_from(datetime.hour()).unwrap();
+        let day_index: usize = usize::try_from(datetime.weekday().num_days_from_monday()).unwrap();
+        
+        current_click_trace.hour[hour_index] += 1;
+        current_click_trace.day[day_index] += 1;
+        current_click_trace.end_time = record.timestamp;
 
         *current_click_trace
             .website

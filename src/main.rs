@@ -230,7 +230,8 @@ fn compute_dist(
             DistanceMetrics::Jaccard => metrics::jaccard_dist(target_vector, ref_vector),
             DistanceMetrics::Bhattacharyya => metrics::bhattacharyya_dist(target_vector, ref_vector),
             DistanceMetrics::KullbrackLeibler => metrics::kullbrack_leibler_dist(target_vector, ref_vector),
-            DistanceMetrics::TotalVariation => metrics::total_varation_dist(target_vector, ref_vector)
+            DistanceMetrics::TotalVariation => metrics::total_varation_dist(target_vector, ref_vector),
+            DistanceMetrics::JeffriesMatusita => metrics::jeffries_matusita_dist(target_vector, ref_vector)
         };
         total_dist.push(dist);
     }
