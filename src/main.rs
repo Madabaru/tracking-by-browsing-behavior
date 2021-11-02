@@ -13,7 +13,7 @@ use rand::{rngs::StdRng, SeedableRng};
 use rand::{seq::IteratorRandom, Rng};
 
 use parse::DataFields;
-use structs::{ClickTrace, ClickTraceVectorized};
+use structs::{ClickTrace, ClickTraceVect};
 
 use metrics::DistanceMetrics;
 
@@ -28,8 +28,8 @@ fn main() {
     let seed = conf.get("seed").unwrap().parse::<u64>().unwrap();
     let mut rng = StdRng::seed_from_u64(seed);
 
-    let client_to_histogram_map: HashMap<u32, Vec<ClickTrace>> =
-        parse::parse_to_histogram(conf).unwrap();
+    let client_to_hist_map: HashMap<u32, Vec<ClickTrace>> =
+        parse::parse_to_hist(conf).unwrap();
 
     let client_sample_size = conf
         .get("client_sample_size")
@@ -38,7 +38,7 @@ fn main() {
         .unwrap();
 
     let client_to_target_idx_map: HashMap<u32, usize> =
-        gen_test_data(&client_to_histogram_map, &mut rng, client_sample_size);
+        gen_test_data(&client_to_hist_map, &mut rng, client_sample_size);
 
     let is_typical_session = conf
         .get("is_typical_session")
@@ -55,21 +55,21 @@ fn main() {
             .unwrap();
 
         let client_to_sample_idx_map: HashMap<u32, Vec<usize>> = get_train_data(
-            &client_to_histogram_map,
+            &client_to_hist_map,
             &mut rng,
             click_trace_sample_size_per_client,
         );
 
         eval(
             conf,
-            &client_to_histogram_map,
+            &client_to_hist_map,
             &client_to_target_idx_map,
             Some(&client_to_sample_idx_map),
         );
     } else {
         eval(
             conf,
-            &client_to_histogram_map,
+            &client_to_hist_map,
             &client_to_target_idx_map,
             None,
         );
@@ -78,16 +78,16 @@ fn main() {
 
 // Sample a subset of clients and a target click trace that the evaluation is based upon
 fn gen_test_data<R: Rng>(
-    client_to_histogram_map: &HashMap<u32, Vec<ClickTrace>>,
+    client_to_hist_map: &HashMap<u32, Vec<ClickTrace>>,
     rng: &mut R,
     client_sample_size: usize,
 ) -> HashMap<u32, usize> {
-    let client_list: Vec<u32> = client_to_histogram_map.keys().cloned().collect();
+    let client_list: Vec<u32> = client_to_hist_map.keys().cloned().collect();
     // Randomly sample clients from the client list
     let sampled_clients_list = client_list.iter().choose_multiple(rng, client_sample_size);
     let mut client_to_target_idx_map = HashMap::<u32, usize>::new();
     for client in sampled_clients_list.into_iter() {
-        let click_traces_list = &client_to_histogram_map.get(client).unwrap();
+        let click_traces_list = &client_to_hist_map.get(client).unwrap();
         let click_trace_len = click_traces_list.len();
         let split_idx = click_trace_len / 2;
         let rand_target_idx: usize = rng.gen_range(split_idx..click_trace_len);
@@ -98,12 +98,12 @@ fn gen_test_data<R: Rng>(
 
 // Sample click traces for each client and store sample indices in map
 fn get_train_data<R: Rng>(
-    client_to_histogram_map: &HashMap<u32, Vec<ClickTrace>>,
+    client_to_hist_map: &HashMap<u32, Vec<ClickTrace>>,
     rng: &mut R,
     click_trace_sample_size_per_client: usize,
 ) -> HashMap<u32, Vec<usize>> {
     let mut client_to_sample_idx_map: HashMap<u32, Vec<usize>> = HashMap::new();
-    for (client, click_traces_list) in client_to_histogram_map.into_iter() {
+    for (client, click_traces_list) in client_to_hist_map.into_iter() {
         let client = client.clone();
         let click_trace_len = click_traces_list.len();
         let split_idx = click_trace_len / 2;
@@ -118,7 +118,7 @@ fn get_train_data<R: Rng>(
 
 fn eval(
     conf: &Properties,
-    client_to_histogram_map: &HashMap<u32, Vec<ClickTrace>>,
+    client_to_hist_map: &HashMap<u32, Vec<ClickTrace>>,
     client_to_target_idx_map: &HashMap<u32, usize>,
     client_to_sample_idx_map: Option<&HashMap<u32, Vec<usize>>>,
 ) {
@@ -145,7 +145,7 @@ fn eval(
                 &metric,
                 client,
                 target_idx,
-                &client_to_histogram_map,
+                &client_to_hist_map,
                 client_to_sample_idx_map,
             )
         })
@@ -167,10 +167,10 @@ fn eval_step(
     metric: &DistanceMetrics,
     client_target: &u32,
     target_idx: &usize,
-    client_to_histogram_map: &HashMap<u32, Vec<ClickTrace>>,
+    client_to_hist_map: &HashMap<u32, Vec<ClickTrace>>,
     client_to_sample_idx_map: Option<&HashMap<u32, Vec<usize>>>,
 ) -> (u32, u32) {
-    let target_histogram = client_to_histogram_map
+    let target_hist = client_to_hist_map
         .get(client_target)
         .unwrap()
         .get(*target_idx)
@@ -179,30 +179,30 @@ fn eval_step(
     let mut lowest_dist = std::f64::INFINITY;
     let mut client_pred = 0;
 
-    for (client, click_traces) in client_to_histogram_map.into_iter() {
+    for (client, click_traces) in client_to_hist_map.into_iter() {
         if is_typical_session {
-            let histograms = client_to_histogram_map.get(client).unwrap();
+            let hists = client_to_hist_map.get(client).unwrap();
 
             let (website_set, code_set, location_set, category_set) =
-                utils::get_unique_sets(&target_histogram, histograms);
+                utils::get_unique_sets(&target_hist, hists);
 
-            let vectorized_target = utils::vectorize_histogram(
-                target_histogram,
+            let vectorized_target = utils::vect_hist(
+                target_hist,
                 &website_set,
                 &code_set,
                 &location_set,
                 &category_set,
             );
 
-            let vectorized_ref = utils::compute_typical_click_trace(
-                histograms,
+            let vect_typ_click_trace = utils::get_typ_click_trace(
+                hists,
                 &website_set,
                 &code_set,
                 &location_set,
                 &category_set,
             );
 
-            let dist = compute_dist(fields, metric, &vectorized_target, &vectorized_ref);
+            let dist = compute_dist(fields, metric, &vectorized_target, &vect_typ_click_trace);
             if dist < lowest_dist {
                 lowest_dist = dist;
                 client_pred = client.clone();
@@ -211,25 +211,25 @@ fn eval_step(
             let client_to_sample_idx_map = client_to_sample_idx_map.unwrap();
             let samples_idx = client_to_sample_idx_map.get(client).unwrap();
 
-            let sampled_histograms: Vec<ClickTrace> = samples_idx
+            let sampled_hists: Vec<ClickTrace> = samples_idx
                 .into_iter()
                 .map(|idx| click_traces.get(*idx).unwrap().clone())
                 .collect();
 
             let (website_set, code_set, location_set, category_set) =
-                utils::get_unique_sets(target_histogram, &sampled_histograms);
+                utils::get_unique_sets(target_hist, &sampled_hists);
 
-            let vectorized_target = utils::vectorize_histogram(
-                target_histogram,
+            let vectorized_target = utils::vect_hist(
+                target_hist,
                 &website_set,
                 &code_set,
                 &location_set,
                 &category_set,
             );
 
-            for sample_histogram in sampled_histograms.into_iter() {
-                let vectorized_ref = utils::vectorize_histogram(
-                    &sample_histogram,
+            for sample_hist in sampled_hists.into_iter() {
+                let vectorized_ref = utils::vect_hist(
+                    &sample_hist,
                     &website_set,
                     &code_set,
                     &location_set,
@@ -243,15 +243,15 @@ fn eval_step(
             }
         }
     }
-    return (client_pred, client_target.clone());
+    (client_pred, client_target.clone())
 }
 
 // Calculate the distance between the target and the reference click trace
 fn compute_dist(
     fields: &Vec<DataFields>,
     metric: &DistanceMetrics,
-    target_click_trace: &ClickTraceVectorized,
-    ref_click_trace: &ClickTraceVectorized,
+    target_click_trace: &ClickTraceVect,
+    ref_click_trace: &ClickTraceVect,
 ) -> f64 {
     // Vector to store distance scores for each data field to be considered
     let mut total_dist = Vec::<f64>::with_capacity(fields.len());

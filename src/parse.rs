@@ -36,7 +36,7 @@ impl FromStr for DataFields {
     }
 }
 
-pub fn parse_to_histogram(
+pub fn parse_to_hist(
     conf: &Properties,
 ) -> Result<HashMap<u32, Vec<ClickTrace>>, Box<dyn Error>> {
     let path = conf.get("path").unwrap();
@@ -50,19 +50,28 @@ pub fn parse_to_histogram(
         .unwrap()
         .parse::<usize>()
         .unwrap();
+
     let min_num_click_traces = conf
         .get("min_num_click_traces")
         .unwrap()
         .parse::<usize>()
         .unwrap();
+
     let delay_limit = conf.get("delay_limit").unwrap().parse::<f64>().unwrap();
+    let max_click_rate = conf.get("max_click_rate").unwrap().parse::<f64>().unwrap();
+    let max_click_trace_duration = conf
+        .get("max_cick_trace_duration")
+        .unwrap()
+        .parse::<f64>()
+        .unwrap();
 
     let mut prev_time: f64 = 0.0;
     let mut prev_client = String::new();
+    let mut prev_location = String::new();
     let mut click_trace_len: usize = 0;
     let mut client_id: u32 = 0;
 
-    let mut client_to_histogram_map: HashMap<u32, Vec<ClickTrace>> = HashMap::new();
+    let mut client_to_hist_map: HashMap<u32, Vec<ClickTrace>> = HashMap::new();
     let mut reader = csv::Reader::from_path(path)?;
 
     for result in reader.deserialize() {
@@ -72,29 +81,38 @@ pub fn parse_to_histogram(
             client_id += 1;
         }
 
-        if !client_to_histogram_map.contains_key(&client_id) {
-            client_to_histogram_map.insert(client_id, Vec::with_capacity(10));
+        if !client_to_hist_map.contains_key(&client_id) {
+            client_to_hist_map.insert(client_id, Vec::with_capacity(10));
         }
 
-        let click_traces_list = client_to_histogram_map.get_mut(&client_id).unwrap();
+        let click_traces_list = client_to_hist_map.get_mut(&client_id).unwrap();
 
         if click_traces_list.is_empty()
             || click_trace_len >= max_click_trace_len
             || record.timestamp - prev_time >= delay_limit
+            || prev_location != record.location
         {
-            if click_trace_len < min_click_trace_len && !click_traces_list.is_empty() {
-                click_traces_list.pop();
+            if !click_traces_list.is_empty() {
+                if click_trace_len < min_click_trace_len
+                || click_traces_list.last().unwrap().start_time
+                    - click_traces_list.first().unwrap().start_time
+                    > max_click_trace_duration
+                || prev_location != record.location
+                || click_traces_list.last().unwrap().click_rate > max_click_rate {
+                    click_traces_list.pop();
+                }
             }
-
+        
             let click_trace = ClickTrace {
                 website: HashMap::new(),
                 code: HashMap::new(),
-                location: HashMap::new(),
+                location: record.location.clone(),
                 category: HashMap::new(),
                 hour: maths::zeros_u32(24),
                 day: maths::zeros_u32(7),
                 start_time: record.timestamp,
                 end_time: record.timestamp,
+                click_rate: 0.0,
             };
             click_traces_list.push(click_trace);
             click_trace_len = 0;
@@ -112,6 +130,8 @@ pub fn parse_to_histogram(
         current_click_trace.hour[hour_index] += 1;
         current_click_trace.day[day_index] += 1;
         current_click_trace.end_time = record.timestamp;
+        current_click_trace.click_rate = click_trace_len as f64
+            / (current_click_trace.end_time - current_click_trace.start_time);
 
         *current_click_trace
             .website
@@ -122,20 +142,18 @@ pub fn parse_to_histogram(
             .entry(record.code.clone())
             .or_insert(0) += 1;
         *current_click_trace
-            .location
-            .entry(record.location.clone())
-            .or_insert(0) += 1;
-        *current_click_trace
             .category
             .entry(record.category.clone())
             .or_insert(0) += 1;
 
         prev_time = record.timestamp;
         prev_client = record.client_id;
+        prev_location = record.location;
         click_trace_len += 1;
     }
 
     // Remove any client with less than the minimum number of click traces
-    client_to_histogram_map.retain(|_, value| value.len() >= min_num_click_traces);
-    Ok(client_to_histogram_map)
+    client_to_hist_map.retain(|_, value| value.len() >= min_num_click_traces);
+    println!("{:?}", client_to_hist_map.keys().len());
+    Ok(client_to_hist_map)
 }
