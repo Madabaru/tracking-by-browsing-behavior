@@ -19,10 +19,7 @@ use metrics::DistanceMetrics;
 
 use ini::{Ini, Properties};
 
-
-
 fn main() {
-
     // Load config file
     let ini = Ini::load_from_file("conf.ini").unwrap();
     let conf = ini.section(Some("Config")).unwrap();
@@ -39,26 +36,44 @@ fn main() {
         .unwrap()
         .parse::<usize>()
         .unwrap();
+
     let client_to_target_idx_map: HashMap<u32, usize> =
         gen_test_data(&client_to_histogram_map, &mut rng, client_sample_size);
 
-    let click_trace_sample_size_per_client = conf
-        .get("click_trace_sample_size_per_client")
+    let is_typical_session = conf
+        .get("is_typical_session")
         .unwrap()
-        .parse::<usize>()
+        .parse::<bool>()
         .unwrap();
-    let client_to_sample_idx_map: HashMap<u32, Vec<usize>> = get_train_data(
-        &client_to_histogram_map,
-        &mut rng,
-        click_trace_sample_size_per_client,
-    );
 
-    eval(
-        conf,
-        &client_to_histogram_map,
-        &client_to_target_idx_map,
-        &client_to_sample_idx_map,
-    );
+    if !is_typical_session {
+
+        let click_trace_sample_size_per_client = conf
+            .get("click_trace_sample_size_per_client")
+            .unwrap()
+            .parse::<usize>()
+            .unwrap();
+
+        let client_to_sample_idx_map: HashMap<u32, Vec<usize>> = get_train_data(
+            &client_to_histogram_map,
+            &mut rng,
+            click_trace_sample_size_per_client,
+        );
+
+        eval(
+            conf,
+            &client_to_histogram_map,
+            &client_to_target_idx_map,
+            Some(&client_to_sample_idx_map),
+        );
+    } else {
+        eval(
+            conf,
+            &client_to_histogram_map,
+            &client_to_target_idx_map,
+            None,
+        );
+    }
 }
 
 // Sample a subset of clients and a target click trace that the evaluation is based upon
@@ -105,7 +120,7 @@ fn eval(
     conf: &Properties,
     client_to_histogram_map: &HashMap<u32, Vec<ClickTrace>>,
     client_to_target_idx_map: &HashMap<u32, usize>,
-    client_to_sample_idx_map: &HashMap<u32, Vec<usize>>,
+    client_to_sample_idx_map: Option<&HashMap<u32, Vec<usize>>>,
 ) {
     let fields: Vec<DataFields> = conf
         .get("fields")
@@ -115,16 +130,23 @@ fn eval(
         .collect();
     let metric = DistanceMetrics::from_str(conf.get("metric").unwrap()).unwrap();
 
+    let is_typical_session = conf
+        .get("is_typical_session")
+        .unwrap()
+        .parse::<bool>()
+        .unwrap();
+
     let result_list: Vec<(u32, u32)> = client_to_target_idx_map
         .par_iter()
         .map(|(client, target_idx)| {
             eval_step(
+                is_typical_session,
                 &fields,
                 &metric,
                 client,
                 target_idx,
                 &client_to_histogram_map,
-                &client_to_sample_idx_map,
+                client_to_sample_idx_map,
             )
         })
         .collect();
@@ -140,12 +162,13 @@ fn eval(
 }
 
 fn eval_step(
+    is_typical_session: bool,
     fields: &Vec<DataFields>,
     metric: &DistanceMetrics,
     client_target: &u32,
     target_idx: &usize,
     client_to_histogram_map: &HashMap<u32, Vec<ClickTrace>>,
-    client_to_sample_idx_map: &HashMap<u32, Vec<usize>>,
+    client_to_sample_idx_map: Option<&HashMap<u32, Vec<usize>>>,
 ) -> (u32, u32) {
     let target_histogram = client_to_histogram_map
         .get(client_target)
@@ -157,39 +180,70 @@ fn eval_step(
     let mut client_pred = 0;
 
     for (client, click_traces) in client_to_histogram_map.into_iter() {
-        let samples_idx = client_to_sample_idx_map.get(client).unwrap();
-        let sampled_histograms = samples_idx
-            .into_iter()
-            .map(|idx| click_traces.get(*idx).unwrap())
-            .collect::<Vec<&ClickTrace>>();
+        if is_typical_session {
+            let histograms = client_to_histogram_map.get(client).unwrap();
 
             let (website_set, code_set, location_set, category_set) =
-                utils::get_unique_sets(&target_histogram, &sampled_histograms);
+                utils::get_unique_sets(&target_histogram, histograms);
 
-        let vectorized_target = utils::vectorize_histogram(
-            target_histogram,
-            &website_set,
-            &code_set,
-            &location_set,
-            &category_set,
-        );
-
-        for sample_histogram in sampled_histograms.into_iter() {
-            let vectorized_ref = utils::vectorize_histogram(
-                sample_histogram,
+            let vectorized_target = utils::vectorize_histogram(
+                target_histogram,
                 &website_set,
                 &code_set,
                 &location_set,
                 &category_set,
             );
+
+            let vectorized_ref = utils::compute_typical_click_trace(
+                histograms,
+                &website_set,
+                &code_set,
+                &location_set,
+                &category_set,
+            );
+
             let dist = compute_dist(fields, metric, &vectorized_target, &vectorized_ref);
             if dist < lowest_dist {
                 lowest_dist = dist;
                 client_pred = client.clone();
             }
+        } else {
+            let client_to_sample_idx_map = client_to_sample_idx_map.unwrap();
+            let samples_idx = client_to_sample_idx_map.get(client).unwrap();
+
+            let sampled_histograms: Vec<ClickTrace> = samples_idx
+                .into_iter()
+                .map(|idx| click_traces.get(*idx).unwrap().clone())
+                .collect();
+
+            let (website_set, code_set, location_set, category_set) =
+                utils::get_unique_sets(target_histogram, &sampled_histograms);
+
+            let vectorized_target = utils::vectorize_histogram(
+                target_histogram,
+                &website_set,
+                &code_set,
+                &location_set,
+                &category_set,
+            );
+
+            for sample_histogram in sampled_histograms.into_iter() {
+                let vectorized_ref = utils::vectorize_histogram(
+                    &sample_histogram,
+                    &website_set,
+                    &code_set,
+                    &location_set,
+                    &category_set,
+                );
+                let dist = compute_dist(fields, metric, &vectorized_target, &vectorized_ref);
+                if dist < lowest_dist {
+                    lowest_dist = dist;
+                    client_pred = client.clone();
+                }
+            }
         }
     }
-    (client_pred, client_target.clone())
+    return (client_pred, client_target.clone());
 }
 
 // Calculate the distance between the target and the reference click trace
@@ -228,10 +282,18 @@ fn compute_dist(
             DistanceMetrics::Manhatten => metrics::manhatten_dist(target_vector, ref_vector),
             DistanceMetrics::Cosine => metrics::consine_dist(target_vector, ref_vector),
             DistanceMetrics::Jaccard => metrics::jaccard_dist(target_vector, ref_vector),
-            DistanceMetrics::Bhattacharyya => metrics::bhattacharyya_dist(target_vector, ref_vector),
-            DistanceMetrics::KullbrackLeibler => metrics::kullbrack_leibler_dist(target_vector, ref_vector),
-            DistanceMetrics::TotalVariation => metrics::total_varation_dist(target_vector, ref_vector),
-            DistanceMetrics::JeffriesMatusita => metrics::jeffries_matusita_dist(target_vector, ref_vector)
+            DistanceMetrics::Bhattacharyya => {
+                metrics::bhattacharyya_dist(target_vector, ref_vector)
+            }
+            DistanceMetrics::KullbrackLeibler => {
+                metrics::kullbrack_leibler_dist(target_vector, ref_vector)
+            }
+            DistanceMetrics::TotalVariation => {
+                metrics::total_varation_dist(target_vector, ref_vector)
+            }
+            DistanceMetrics::JeffriesMatusita => {
+                metrics::jeffries_matusita_dist(target_vector, ref_vector)
+            }
         };
         total_dist.push(dist);
     }

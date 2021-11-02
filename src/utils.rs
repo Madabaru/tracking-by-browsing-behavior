@@ -1,3 +1,4 @@
+use crate::maths;
 use crate::structs::{ClickTrace, ClickTraceVectorized};
 
 use std::collections::HashMap;
@@ -36,7 +37,7 @@ pub fn vectorize_histogram(
 
 pub fn get_unique_sets(
     target_histogram: &ClickTrace,
-    sampled_histograms: &Vec<&ClickTrace>,
+    sampled_histograms: &Vec<ClickTrace>, // &ClickTrace
 ) -> (
     IndexSet<String>,
     IndexSet<String>,
@@ -61,4 +62,43 @@ pub fn get_unique_sets(
     let category_set: IndexSet<String> = IndexSet::from_iter(category_vector);
 
     (website_set, code_set, location_set, category_set)
+}
+
+pub fn compute_typical_click_trace(
+    histograms: &Vec<ClickTrace>,
+    website_set: &IndexSet<String>,
+    code_set: &IndexSet<String>,
+    location_set: &IndexSet<String>,
+    category_set: &IndexSet<String>,
+) -> ClickTraceVectorized {
+    let mut website_vector = maths::zeros_u32(website_set.len());
+    let mut code_vector = maths::zeros_u32(code_set.len());
+    let mut location_vector = maths::zeros_u32(location_set.len());
+    let mut category_vector = maths::zeros_u32(category_set.len());
+
+    for histogram in histograms.into_iter() {
+        let histo_vectorized =
+            vectorize_histogram(histogram, website_set, code_set, location_set, category_set);
+        website_vector = maths::add(website_vector, &histo_vectorized.website);
+        code_vector = maths::add(code_vector, &histo_vectorized.code);
+        location_vector = maths::add(location_vector, &histo_vectorized.location);
+        category_vector = maths::add(category_vector, &histo_vectorized.category);
+    }
+
+    let website_len = website_vector.len() as u32;
+    website_vector.iter_mut().for_each(|a| *a /= website_len);
+    let code_len = code_vector.len() as u32;
+    code_vector.iter_mut().for_each(|a| *a /= code_len);
+    let location_len = location_vector.len() as u32;
+    location_vector.iter_mut().for_each(|a| *a /= location_len);
+    let category_len = category_vector.len() as u32;
+    category_vector.iter_mut().for_each(|a| *a /= category_len);
+
+    let typical_click_trace_vectorized = ClickTraceVectorized {
+        website: website_vector,
+        code: code_vector,
+        location: location_vector,
+        category: category_vector,
+    };
+    typical_click_trace_vectorized
 }

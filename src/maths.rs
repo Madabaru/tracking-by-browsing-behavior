@@ -10,6 +10,9 @@ pub fn zeros_u32(size: usize) -> Vec<u32> {
     vec![0; size]
 }
 
+pub fn add(vector: Vec<u32>, ref_vector: &Vec<u32>) -> Vec<u32> {
+    vector.iter().zip(ref_vector).map(|(a, b)| a + b).collect()
+}
 
 pub fn vec_to_matrix(vec: Vec<u32>, norm: bool) -> MatrixXx1<f64> {
     let matrix = MatrixXx1::from_vec(vec);
