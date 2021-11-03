@@ -7,7 +7,7 @@ pub mod utils;
 use std::collections::HashMap;
 use std::str::FromStr;
 
-use rayon::prelude::*;
+use rayon::{prelude::*};
 
 use rand::{rngs::StdRng, SeedableRng};
 use rand::{seq::IteratorRandom, Rng};
@@ -18,6 +18,8 @@ use structs::{ClickTrace, ClickTraceVect};
 use metrics::DistanceMetrics;
 
 use ini::{Ini, Properties};
+
+use ordered_float::OrderedFloat;
 
 fn main() {
     // Load config file
@@ -129,7 +131,7 @@ fn eval(
         .parse::<bool>()
         .unwrap();
 
-    let result_list: Vec<(u32, u32)> = client_to_target_idx_map
+    let result_list: Vec<(u32, u32, bool, bool)> = client_to_target_idx_map
         .par_iter()
         .map(|(client, target_idx)| {
             eval_step(
@@ -145,13 +147,25 @@ fn eval(
         .collect();
 
     let mut correct_pred = 0;
-    for (pred, target) in result_list.iter() {
+    let mut top_10_count = 0;
+    let mut top_10_percent_count = 0;
+    for (pred, target, in_top_10, in_top_10_percent) in result_list.iter() {
         if pred == target {
             correct_pred += 1
         }
+        if *in_top_10 {
+            top_10_count += 1;
+        }
+        if *in_top_10_percent {
+            top_10_percent_count += 1;
+        }
     }
     let accuracy: f64 = correct_pred as f64 / result_list.len() as f64;
-    println!("Accuracy: {:?}", accuracy)
+    println!("Accuracy: {:?}", accuracy);
+    let top_10: f64 = top_10_count as f64 / result_list.len() as f64;
+    println!("Top 10 Accuracy: {:?}", top_10);
+    let top_10_percent: f64 = top_10_percent_count as f64 / result_list.len() as f64;
+    println!("Top 10 Percent Accuracy: {:?}", top_10_percent);
 }
 
 fn eval_step(
@@ -162,7 +176,7 @@ fn eval_step(
     target_idx: &usize,
     client_to_hist_map: &HashMap<u32, Vec<ClickTrace>>,
     client_to_sample_idx_map: Option<&HashMap<u32, Vec<usize>>>,
-) -> (u32, u32) {
+) -> (u32, u32, bool, bool) {
     let target_hist = client_to_hist_map
         .get(client_target)
         .unwrap()
@@ -170,7 +184,7 @@ fn eval_step(
         .unwrap();
 
     let mut lowest_dist = std::f64::INFINITY;
-    let mut client_pred = 0;
+    let mut tuples: Vec<(OrderedFloat<f64>, u32)> = Vec::with_capacity(client_to_hist_map.len());
 
     for (client, click_traces) in client_to_hist_map.into_iter() {
         if is_typical_session {
@@ -196,10 +210,7 @@ fn eval_step(
             );
 
             let dist = compute_dist(fields, metric, &vectorized_target, &vect_typ_click_trace);
-            if dist < lowest_dist {
-                lowest_dist = dist;
-                client_pred = client.clone();
-            }
+            tuples.push((OrderedFloat(dist), client.clone()));
         } else {
             let client_to_sample_idx_map = client_to_sample_idx_map.unwrap();
             let samples_idx = client_to_sample_idx_map.get(client).unwrap();
@@ -229,14 +240,15 @@ fn eval_step(
                     &category_set,
                 );
                 let dist = compute_dist(fields, metric, &vectorized_target, &vectorized_ref);
-                if dist < lowest_dist {
-                    lowest_dist = dist;
-                    client_pred = client.clone();
-                }
+                tuples.push((OrderedFloat(dist), client.clone()));
             }
         }
     }
-    (client_pred, client_target.clone())
+    tuples.sort_unstable_by_key(|k| k.0);
+    let cutoff: usize = (0.1 * client_to_hist_map.len() as f64) as usize;
+    let is_top_10_percent = utils::is_target_in_top_k(client_target, &tuples[..cutoff]);
+    let is_top_10: bool = utils::is_target_in_top_k(client_target, &tuples[..10]);
+    (client_target.clone(), tuples[0].1, is_top_10, is_top_10_percent)
 }
 
 // Calculate the distance between the target and the reference click trace

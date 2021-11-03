@@ -6,6 +6,7 @@ use std::iter::FromIterator;
 use std::vec;
 
 use indexmap::set::IndexSet;
+use ordered_float::OrderedFloat;
 
 pub fn gen_vec_from_freq_map(
     type_to_freq_map: &HashMap<String, u32>,
@@ -110,4 +111,9 @@ pub fn get_typ_click_trace(
         category: category_vec,
     };
     typical_click_trace_vecized
+}
+
+
+pub fn is_target_in_top_k(client_target: &u32, tuples: &[(OrderedFloat<f64>, u32)]) -> bool {
+    tuples.iter().any(|(_, b)| b == client_target)
 }
