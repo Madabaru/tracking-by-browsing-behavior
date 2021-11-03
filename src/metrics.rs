@@ -3,9 +3,12 @@ use crate::maths;
 use nalgebra::EuclideanNorm;
 use nalgebra::LpNorm;
 
+
 use std::collections::HashSet;
 use std::str::FromStr;
 use std::string::ParseError;
+use std::f64::consts::E;
+
 
 pub enum DistanceMetrics {
     Euclidean,
@@ -16,6 +19,7 @@ pub enum DistanceMetrics {
     KullbrackLeibler,
     TotalVariation,
     JeffriesMatusita,
+    ChiSquared,
 }
 
 impl FromStr for DistanceMetrics {
@@ -30,6 +34,7 @@ impl FromStr for DistanceMetrics {
             "kullbrack_leibler" => Ok(Self::KullbrackLeibler),
             "total_variation" => Ok(Self::TotalVariation),
             "jeffries_matusita" => Ok(Self::JeffriesMatusita),
+            "chi_quared" => Ok(Self::ChiSquared),
             x => panic!("Problem opening the file: {:?}", x),
         }
     }
@@ -59,6 +64,71 @@ pub fn consine_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
     1.0
 }
 
+pub fn bhattacharyya_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
+    let target_matrix = maths::vec_to_matrix(target_vec, true);
+    let ref_matrix = maths::vec_to_matrix(ref_vec, true);
+    let dist = target_matrix.zip_fold(&ref_matrix, 0.0, |acc, a, b| {
+        let sqrt = (a * b).sqrt();
+        acc + sqrt
+    });
+    -f64::log(dist, E)
+}
+
+
+pub fn kullbrack_leibler_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
+    let target_matrix = maths::vec_to_matrix(target_vec, true);
+    let ref_matrix = maths::vec_to_matrix(ref_vec, true);
+    let eps  = f64::EPSILON;
+    let dist = target_matrix.zip_fold(&ref_matrix, 0.0, |acc, a, b| {
+        let a = a + eps;
+        let b = b + eps;
+        let mul = a * f64::log(b / a, E);
+        acc + mul
+    });
+    -dist
+}
+
+
+pub fn total_variation_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
+    let target_matrix = maths::vec_to_matrix(target_vec, true);
+    let ref_matrix = maths::vec_to_matrix(ref_vec, true);
+    let dist = target_matrix.zip_fold(&ref_matrix, 0.0, |acc, a, b| {
+        let diff = (a - b).abs();
+        f64::max(acc, diff)
+    });
+    dist
+}
+
+
+pub fn jeffries_matusita_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
+    let target_matrix = maths::vec_to_matrix(target_vec, true);
+    let ref_matrix = maths::vec_to_matrix(ref_vec, true);
+    let sq_sum = target_matrix.zip_fold(&ref_matrix, 0.0, |acc, a, b| {
+        let diff = a.sqrt() - b.sqrt();
+        let sq = f64::powi(diff, 2);
+        acc + sq
+    });
+    let dist: f64 = sq_sum.sqrt();
+    dist
+}
+
+
+pub fn chi_squared_ist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
+    let target_matrix = maths::vec_to_matrix(target_vec, true);
+    let ref_matrix = maths::vec_to_matrix(ref_vec, true);
+    let eps  = f64::EPSILON;
+    let sum = target_matrix.zip_fold(&ref_matrix, 0.0, |acc, a, b| {
+        let a = a + eps;
+        let b = b + eps;
+        let dff_counter = f64::powi(a - b, 2);
+        let diff_denominator = a + b;
+        acc + (dff_counter / diff_denominator) 
+    });
+    let dist: f64 = sum * 0.5;
+    dist
+}
+
+
 pub fn jaccard_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
     let non_zero_target: Vec<usize> = target_vec
         .into_iter()
@@ -74,73 +144,10 @@ pub fn jaccard_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
         .collect();
     let target_set: HashSet<usize> = non_zero_target.into_iter().collect();
     let ref_set: HashSet<usize> = non_zero_ref.into_iter().collect();
-    let intersec = target_set.intersection(&ref_set).count() as f64;
+    let inter = target_set.intersection(&ref_set).count() as f64;
     let union = target_set.union(&ref_set).count() as f64;
-    let dist: f64 = (union - intersec) / union;
-    dist
+    let dist: f64 = inter / union;
+    1.0-dist
 }
 
-// TODO: Normalize?
-pub fn bhattacharyya_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
-    let sq_sum = target_vec
-        .into_iter()
-        .zip(ref_vec)
-        .map(|(a, b)| (a as f64 * b as f64).sqrt())
-        .sum();
-    -f64::log10(sq_sum)
-}
 
-// TODO: Normalize?
-pub fn kullbrack_leibler_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
-    let eps  = f64::EPSILON;
-    let dist: f64 = target_vec
-        .into_iter()
-        .zip(ref_vec)
-        .map(|(a, b)| a as f64 * f64::log10(b as f64 / (a as f64 + eps)))
-        .sum();
-    println!("{:?}", dist);
-    -dist
-}
-
-// TODO: Normalize?
-pub fn total_varation_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
-    let dist = target_vec
-        .into_iter()
-        .zip(ref_vec)
-        .map(|(a, b)| (a as i32 - b as i32).abs())
-        .max()
-        .unwrap();
-    dist as f64
-}
-
-// TODO: Normalize?
-pub fn jeffries_matusita_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
-
-    let target_vec = vec![1, 2, 3];
-    let ref_vec = vec![2, 3, 2];
-
-    let target_matrix = maths::vec_to_matrix(target_vec, true);
-    let ref_matrix = maths::vec_to_matrix(ref_vec, true);
-    
-    let sq_sum = target_matrix.zip_fold(&ref_matrix, 0.0, |acc, a, b| {
-        let sq = (a * b).sqrt();
-        acc + sq
-    });
-    let dist: f64 = (2.0 * (1.0 - sq_sum)).sqrt();
-    dist
-
-    // m1.zip_fold(m2, T::SimdRealField::zero(), |acc, a, b| {
-    //     let diff = a - b;
-    //     acc + diff.simd_modulus_squared()
-    // })
-    // .simd_sqrt()
-
-
-    // let sq_sum: f64 = target_vec
-    //     .into_iter()
-    //     .zip(ref_vec)
-    //     .map(|(a, b)| (a as f64 * b as f64).sqrt())
-    //     .sum();
-    // let dist: f64 = (2.0 * (1.0 - sq_sum)).sqrt();
-    // dist
-}

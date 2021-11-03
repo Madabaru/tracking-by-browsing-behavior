@@ -289,11 +289,12 @@ fn compute_dist(
                 metrics::kullbrack_leibler_dist(target_vector, ref_vector)
             }
             DistanceMetrics::TotalVariation => {
-                metrics::total_varation_dist(target_vector, ref_vector)
+                metrics::total_variation_dist(target_vector, ref_vector)
             }
             DistanceMetrics::JeffriesMatusita => {
                 metrics::jeffries_matusita_dist(target_vector, ref_vector)
             }
+            DistanceMetrics::ChiSquared => {metrics::chi_squared_ist(target_vector, ref_vector)}
         };
         total_dist.push(dist);
     }
