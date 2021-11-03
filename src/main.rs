@@ -294,7 +294,7 @@ fn compute_dist(
             DistanceMetrics::JeffriesMatusita => {
                 metrics::jeffries_matusita_dist(target_vector, ref_vector)
             }
-            DistanceMetrics::ChiSquared => {metrics::chi_squared_ist(target_vector, ref_vector)}
+            DistanceMetrics::ChiSquared => {metrics::chi_squared_dist(target_vector, ref_vector)}
         };
         total_dist.push(dist);
     }

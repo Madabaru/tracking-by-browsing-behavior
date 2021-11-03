@@ -113,7 +113,7 @@ pub fn jeffries_matusita_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
 }
 
 
-pub fn chi_squared_ist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
+pub fn chi_squared_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
     let target_matrix = maths::vec_to_matrix(target_vec, true);
     let ref_matrix = maths::vec_to_matrix(ref_vec, true);
     let eps  = f64::EPSILON;
