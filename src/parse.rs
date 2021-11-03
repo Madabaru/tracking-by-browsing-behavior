@@ -36,9 +36,7 @@ impl FromStr for DataFields {
     }
 }
 
-pub fn parse_to_hist(
-    conf: &Properties,
-) -> Result<HashMap<u32, Vec<ClickTrace>>, Box<dyn Error>> {
+pub fn parse_to_hist(conf: &Properties) -> Result<HashMap<u32, Vec<ClickTrace>>, Box<dyn Error>> {
     let path = conf.get("path").unwrap();
     let max_click_trace_len = conf
         .get("max_cick_tace_len")
@@ -94,15 +92,16 @@ pub fn parse_to_hist(
         {
             if !click_traces_list.is_empty() {
                 if click_trace_len < min_click_trace_len
-                || click_traces_list.last().unwrap().start_time
-                    - click_traces_list.first().unwrap().start_time
-                    > max_click_trace_duration
-                || prev_location != record.location
-                || click_traces_list.last().unwrap().click_rate > max_click_rate {
+                    || click_traces_list.last().unwrap().start_time
+                        - click_traces_list.first().unwrap().start_time
+                        > max_click_trace_duration
+                    || prev_location != record.location
+                    || click_traces_list.last().unwrap().click_rate > max_click_rate
+                {
                     click_traces_list.pop();
                 }
             }
-        
+
             let click_trace = ClickTrace {
                 website: HashMap::new(),
                 code: HashMap::new(),

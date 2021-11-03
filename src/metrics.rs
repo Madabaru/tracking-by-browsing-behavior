@@ -3,12 +3,10 @@ use crate::maths;
 use nalgebra::EuclideanNorm;
 use nalgebra::LpNorm;
 
-
 use std::collections::HashSet;
+use std::f64::consts::E;
 use std::str::FromStr;
 use std::string::ParseError;
-use std::f64::consts::E;
-
 
 pub enum DistanceMetrics {
     Euclidean,
@@ -74,11 +72,10 @@ pub fn bhattacharyya_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
     -f64::log(dist, E)
 }
 
-
 pub fn kullbrack_leibler_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
     let target_matrix = maths::vec_to_matrix(target_vec, true);
     let ref_matrix = maths::vec_to_matrix(ref_vec, true);
-    let eps  = f64::EPSILON;
+    let eps = f64::EPSILON;
     let dist = target_matrix.zip_fold(&ref_matrix, 0.0, |acc, a, b| {
         let a = a + eps;
         let b = b + eps;
@@ -87,7 +84,6 @@ pub fn kullbrack_leibler_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
     });
     -dist
 }
-
 
 pub fn total_variation_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
     let target_matrix = maths::vec_to_matrix(target_vec, true);
@@ -98,7 +94,6 @@ pub fn total_variation_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
     });
     dist
 }
-
 
 pub fn jeffries_matusita_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
     let target_matrix = maths::vec_to_matrix(target_vec, true);
@@ -112,22 +107,20 @@ pub fn jeffries_matusita_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
     dist
 }
 
-
 pub fn chi_squared_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
     let target_matrix = maths::vec_to_matrix(target_vec, true);
     let ref_matrix = maths::vec_to_matrix(ref_vec, true);
-    let eps  = f64::EPSILON;
+    let eps = f64::EPSILON;
     let sum = target_matrix.zip_fold(&ref_matrix, 0.0, |acc, a, b| {
         let a = a + eps;
         let b = b + eps;
         let dff_counter = f64::powi(a - b, 2);
         let diff_denominator = a + b;
-        acc + (dff_counter / diff_denominator) 
+        acc + (dff_counter / diff_denominator)
     });
     let dist: f64 = sum * 0.5;
     dist
 }
-
 
 pub fn jaccard_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
     let non_zero_target: Vec<usize> = target_vec
@@ -147,7 +140,5 @@ pub fn jaccard_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
     let inter = target_set.intersection(&ref_set).count() as f64;
     let union = target_set.union(&ref_set).count() as f64;
     let dist: f64 = inter / union;
-    1.0-dist
+    1.0 - dist
 }
-
-

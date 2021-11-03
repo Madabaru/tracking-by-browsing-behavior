@@ -28,8 +28,7 @@ fn main() {
     let seed = conf.get("seed").unwrap().parse::<u64>().unwrap();
     let mut rng = StdRng::seed_from_u64(seed);
 
-    let client_to_hist_map: HashMap<u32, Vec<ClickTrace>> =
-        parse::parse_to_hist(conf).unwrap();
+    let client_to_hist_map: HashMap<u32, Vec<ClickTrace>> = parse::parse_to_hist(conf).unwrap();
 
     let client_sample_size = conf
         .get("client_sample_size")
@@ -47,7 +46,6 @@ fn main() {
         .unwrap();
 
     if !is_typical_session {
-
         let click_trace_sample_size_per_client = conf
             .get("click_trace_sample_size_per_client")
             .unwrap()
@@ -67,12 +65,7 @@ fn main() {
             Some(&client_to_sample_idx_map),
         );
     } else {
-        eval(
-            conf,
-            &client_to_hist_map,
-            &client_to_target_idx_map,
-            None,
-        );
+        eval(conf, &client_to_hist_map, &client_to_target_idx_map, None);
     }
 }
 
@@ -294,7 +287,7 @@ fn compute_dist(
             DistanceMetrics::JeffriesMatusita => {
                 metrics::jeffries_matusita_dist(target_vector, ref_vector)
             }
-            DistanceMetrics::ChiSquared => {metrics::chi_squared_dist(target_vector, ref_vector)}
+            DistanceMetrics::ChiSquared => metrics::chi_squared_dist(target_vector, ref_vector),
         };
         total_dist.push(dist);
     }
