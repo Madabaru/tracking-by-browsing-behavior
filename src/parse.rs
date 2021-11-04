@@ -72,6 +72,8 @@ pub fn parse_to_hist(conf: &Properties) -> Result<HashMap<u32, Vec<ClickTrace>>,
     let mut client_to_hist_map: HashMap<u32, Vec<ClickTrace>> = HashMap::new();
     let mut reader = csv::Reader::from_path(path)?;
 
+    // reader.set_headers(csv::StringRecord::from(vec!["client_id", "timestamp", "website", "code", "location", "category"]));
+
     for result in reader.deserialize() {
         let record: Record = result?;
 
@@ -152,6 +154,7 @@ pub fn parse_to_hist(conf: &Properties) -> Result<HashMap<u32, Vec<ClickTrace>>,
     }
 
     // Remove any client with less than the minimum number of click traces
+    println!("{:?}", client_to_hist_map.keys().len());
     client_to_hist_map.retain(|_, value| value.len() >= min_num_click_traces);
     println!("{:?}", client_to_hist_map.keys().len());
     Ok(client_to_hist_map)

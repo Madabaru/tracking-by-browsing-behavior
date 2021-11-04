@@ -5,9 +5,12 @@ pub mod structs;
 pub mod utils;
 
 use std::collections::HashMap;
+use std::fs::File;
+use std::io::prelude::*;
+use std::io::BufWriter;
 use std::str::FromStr;
 
-use rayon::{prelude::*};
+use rayon::prelude::*;
 
 use rand::{rngs::StdRng, SeedableRng};
 use rand::{seq::IteratorRandom, Rng};
@@ -160,12 +163,19 @@ fn eval(
             top_10_percent_count += 1;
         }
     }
+
     let accuracy: f64 = correct_pred as f64 / result_list.len() as f64;
-    println!("Accuracy: {:?}", accuracy);
+    println!("Rank 1: {:?}", accuracy);
     let top_10: f64 = top_10_count as f64 / result_list.len() as f64;
-    println!("Top 10 Accuracy: {:?}", top_10);
+    println!("Top 10: {:?}", top_10);
     let top_10_percent: f64 = top_10_percent_count as f64 / result_list.len() as f64;
-    println!("Top 10 Percent Accuracy: {:?}", top_10_percent);
+    println!("Top 10 Percent: {:?}", top_10_percent);
+
+    let write_file = File::create("tmp/output").unwrap();
+    let mut writer = BufWriter::new(&write_file);
+    for i in result_list {
+        writer.write_fmt(format_args!("{},{} \n", i.0, i.1));
+    }
 }
 
 fn eval_step(
@@ -183,7 +193,6 @@ fn eval_step(
         .get(*target_idx)
         .unwrap();
 
-    let mut lowest_dist = std::f64::INFINITY;
     let mut tuples: Vec<(OrderedFloat<f64>, u32)> = Vec::with_capacity(client_to_hist_map.len());
 
     for (client, click_traces) in client_to_hist_map.into_iter() {
@@ -248,7 +257,12 @@ fn eval_step(
     let cutoff: usize = (0.1 * client_to_hist_map.len() as f64) as usize;
     let is_top_10_percent = utils::is_target_in_top_k(client_target, &tuples[..cutoff]);
     let is_top_10: bool = utils::is_target_in_top_k(client_target, &tuples[..10]);
-    (client_target.clone(), tuples[0].1, is_top_10, is_top_10_percent)
+    (
+        client_target.clone(),
+        tuples[0].1,
+        is_top_10,
+        is_top_10_percent,
+    )
 }
 
 // Calculate the distance between the target and the reference click trace
