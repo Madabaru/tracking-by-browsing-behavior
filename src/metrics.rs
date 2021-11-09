@@ -6,9 +6,9 @@ use nalgebra::LpNorm;
 use std::collections::HashSet;
 use std::f64::consts::E;
 use std::str::FromStr;
-use std::string::ParseError;
 
-pub enum DistanceMetrics {
+#[derive(Debug)]
+pub enum DistanceMetric {
     Euclidean,
     Manhatten,
     Cosine,
@@ -20,20 +20,20 @@ pub enum DistanceMetrics {
     ChiSquared,
 }
 
-impl FromStr for DistanceMetrics {
-    type Err = ParseError;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_lowercase().as_ref() {
-            "euclidean" => Ok(Self::Euclidean),
-            "manhatten" => Ok(Self::Manhatten),
-            "cosine" => Ok(Self::Cosine),
-            "jaccard" => Ok(Self::Jaccard),
-            "bhattacharyya" => Ok(Self::Bhattacharyya),
-            "kullbrack_leibler" => Ok(Self::KullbrackLeibler),
-            "total_variation" => Ok(Self::TotalVariation),
-            "jeffries_matusita" => Ok(Self::JeffriesMatusita),
-            "chi_quared" => Ok(Self::ChiSquared),
-            x => panic!("Problem opening the file: {:?}", x),
+impl FromStr for DistanceMetric {
+    type Err = std::string::ParseError;
+    fn from_str(s: &str) -> Result<DistanceMetric, Self::Err> {
+        match s {
+            "euclidean" => Ok(DistanceMetric::Euclidean),
+            "manhatten" => Ok(DistanceMetric::Manhatten),
+            "cosine" => Ok(DistanceMetric::Cosine),
+            "jaccard" => Ok(DistanceMetric::Jaccard),
+            "bhattacharyya" => Ok(DistanceMetric::Bhattacharyya),
+            "kullbrack_leibler" => Ok(DistanceMetric::KullbrackLeibler),
+            "total_variation" => Ok(DistanceMetric::TotalVariation),
+            "jeffries_matusita" => Ok(DistanceMetric::JeffriesMatusita),
+            "chi_quared" => Ok(DistanceMetric::ChiSquared),
+            x => panic!("The supplied metric does not exist: {:?}", x),
         }
     }
 }

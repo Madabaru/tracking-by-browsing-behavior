@@ -9,13 +9,12 @@ use chrono::prelude::DateTime;
 use chrono::Datelike;
 use chrono::{Timelike, Utc};
 
-use ini::Properties;
-
+use crate::cli::Config;
 use crate::maths;
 use crate::structs::ClickTrace;
 use crate::structs::Record;
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 pub enum DataFields {
     Website,
     Code,
@@ -36,33 +35,7 @@ impl FromStr for DataFields {
     }
 }
 
-pub fn parse_to_hist(conf: &Properties) -> Result<HashMap<u32, Vec<ClickTrace>>, Box<dyn Error>> {
-    let path = conf.get("path").unwrap();
-    let max_click_trace_len = conf
-        .get("max_cick_tace_len")
-        .unwrap()
-        .parse::<usize>()
-        .unwrap();
-    let min_click_trace_len = conf
-        .get("min_click_trace_len")
-        .unwrap()
-        .parse::<usize>()
-        .unwrap();
-
-    let min_num_click_traces = conf
-        .get("min_num_click_traces")
-        .unwrap()
-        .parse::<usize>()
-        .unwrap();
-
-    let delay_limit = conf.get("delay_limit").unwrap().parse::<f64>().unwrap();
-    let max_click_rate = conf.get("max_click_rate").unwrap().parse::<f64>().unwrap();
-    let max_click_trace_duration = conf
-        .get("max_cick_trace_duration")
-        .unwrap()
-        .parse::<f64>()
-        .unwrap();
-
+pub fn parse_to_hist(config: &Config) -> Result<HashMap<u32, Vec<ClickTrace>>, Box<dyn Error>> {
     let mut prev_time: f64 = 0.0;
     let mut prev_client = String::new();
     let mut prev_location = String::new();
@@ -70,7 +43,7 @@ pub fn parse_to_hist(conf: &Properties) -> Result<HashMap<u32, Vec<ClickTrace>>,
     let mut client_id: u32 = 0;
 
     let mut client_to_hist_map: HashMap<u32, Vec<ClickTrace>> = HashMap::new();
-    let mut reader = csv::Reader::from_path(path)?;
+    let mut reader = csv::Reader::from_path(&config.path)?;
 
     // reader.set_headers(csv::StringRecord::from(vec!["client_id", "timestamp", "website", "code", "location", "category"]));
 
@@ -88,17 +61,18 @@ pub fn parse_to_hist(conf: &Properties) -> Result<HashMap<u32, Vec<ClickTrace>>,
         let click_traces_list = client_to_hist_map.get_mut(&client_id).unwrap();
 
         if click_traces_list.is_empty()
-            || click_trace_len >= max_click_trace_len
-            || record.timestamp - prev_time >= delay_limit
+            || click_trace_len >= config.max_click_trace_len
+            || record.timestamp - prev_time >= config.delay_limit
             || prev_location != record.location
         {
             if !click_traces_list.is_empty() {
-                if click_trace_len < min_click_trace_len
-                    || click_traces_list.last().unwrap().start_time
-                        - click_traces_list.first().unwrap().start_time
-                        > max_click_trace_duration
-                    || prev_location != record.location
-                    || click_traces_list.last().unwrap().click_rate > max_click_rate
+                if click_trace_len < config.min_click_trace_len
+                    || click_traces_list.last().unwrap().click_rate > config.max_click_rate
+                    || click_traces_list.last().unwrap().end_time
+                        - click_traces_list.last().unwrap().start_time
+                        > config.max_click_trace_duration
+                    || (prev_location != record.location
+                        && record.timestamp - prev_time < config.delay_limit)
                 {
                     click_traces_list.pop();
                 }
@@ -155,7 +129,7 @@ pub fn parse_to_hist(conf: &Properties) -> Result<HashMap<u32, Vec<ClickTrace>>,
 
     // Remove any client with less than the minimum number of click traces
     println!("{:?}", client_to_hist_map.keys().len());
-    client_to_hist_map.retain(|_, value| value.len() >= min_num_click_traces);
+    client_to_hist_map.retain(|_, value| value.len() >= config.min_num_click_traces);
     println!("{:?}", client_to_hist_map.keys().len());
     Ok(client_to_hist_map)
 }

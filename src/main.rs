@@ -1,3 +1,4 @@
+pub mod cli;
 pub mod maths;
 pub mod metrics;
 pub mod parse;
@@ -10,67 +11,53 @@ use std::io::prelude::*;
 use std::io::BufWriter;
 use std::str::FromStr;
 
+use cli::Config;
 use rayon::prelude::*;
 
 use rand::{rngs::StdRng, SeedableRng};
 use rand::{seq::IteratorRandom, Rng};
 
+use ordered_float::OrderedFloat;
 use parse::DataFields;
 use structs::{ClickTrace, ClickTraceVect};
 
-use metrics::DistanceMetrics;
-
-use ini::{Ini, Properties};
-
-use ordered_float::OrderedFloat;
+use crate::metrics::DistanceMetric;
 
 fn main() {
-    // Load config file
-    let ini = Ini::load_from_file("conf.ini").unwrap();
-    let conf = ini.section(Some("Config")).unwrap();
+    // Load config
+    let config = cli::get_cli_config().unwrap();
 
     // Set random seed for reproducability
-    let seed = conf.get("seed").unwrap().parse::<u64>().unwrap();
-    let mut rng = StdRng::seed_from_u64(seed);
+    let mut rng = StdRng::seed_from_u64(config.seed);
 
-    let client_to_hist_map: HashMap<u32, Vec<ClickTrace>> = parse::parse_to_hist(conf).unwrap();
-
-    let client_sample_size = conf
-        .get("client_sample_size")
-        .unwrap()
-        .parse::<usize>()
-        .unwrap();
+    let client_to_hist_map: HashMap<u32, Vec<ClickTrace>> = parse::parse_to_hist(&config).unwrap();
 
     let client_to_target_idx_map: HashMap<u32, usize> =
-        gen_test_data(&client_to_hist_map, &mut rng, client_sample_size);
+        gen_test_data(&client_to_hist_map, &mut rng, config.client_sample_size);
 
-    let is_typical_session = conf
-        .get("is_typical_session")
-        .unwrap()
-        .parse::<bool>()
-        .unwrap();
-
-    if !is_typical_session {
-        let click_trace_sample_size_per_client = conf
-            .get("click_trace_sample_size_per_client")
-            .unwrap()
-            .parse::<usize>()
-            .unwrap();
-
+    if !config.typical {
         let client_to_sample_idx_map: HashMap<u32, Vec<usize>> = get_train_data(
             &client_to_hist_map,
             &mut rng,
-            click_trace_sample_size_per_client,
+            config.click_trace_sample_size,
         );
 
         eval(
-            conf,
+            &config,
             &client_to_hist_map,
             &client_to_target_idx_map,
-            Some(&client_to_sample_idx_map),
+            &client_to_sample_idx_map,
         );
     } else {
-        eval(conf, &client_to_hist_map, &client_to_target_idx_map, None);
+        let client_to_sample_idx_map: HashMap<u32, Vec<usize>> =
+            get_train_data(&client_to_hist_map, &mut rng, 0);
+
+        eval(
+            &config,
+            &client_to_hist_map,
+            &client_to_target_idx_map,
+            &client_to_sample_idx_map,
+        );
     }
 }
 
@@ -87,6 +74,7 @@ fn gen_test_data<R: Rng>(
     for client in sampled_clients_list.into_iter() {
         let click_traces_list = &client_to_hist_map.get(client).unwrap();
         let click_trace_len = click_traces_list.len();
+        // Split click history in 50%/50%
         let split_idx = click_trace_len / 2;
         let rand_target_idx: usize = rng.gen_range(split_idx..click_trace_len);
         client_to_target_idx_map.insert(*client, rand_target_idx);
@@ -98,7 +86,7 @@ fn gen_test_data<R: Rng>(
 fn get_train_data<R: Rng>(
     client_to_hist_map: &HashMap<u32, Vec<ClickTrace>>,
     rng: &mut R,
-    click_trace_sample_size_per_client: usize,
+    click_trace_sample_size: usize,
 ) -> HashMap<u32, Vec<usize>> {
     let mut client_to_sample_idx_map: HashMap<u32, Vec<usize>> = HashMap::new();
     for (client, click_traces_list) in client_to_hist_map.into_iter() {
@@ -106,41 +94,32 @@ fn get_train_data<R: Rng>(
         let click_trace_len = click_traces_list.len();
         let split_idx = click_trace_len / 2;
         let idx_list: Vec<usize> = (0..split_idx).collect();
-        let sampled_idx = idx_list
-            .into_iter()
-            .choose_multiple(rng, click_trace_sample_size_per_client);
-        client_to_sample_idx_map.insert(client, sampled_idx);
+        if click_trace_sample_size > 0 {
+            let sampled_idx = idx_list
+                .into_iter()
+                .choose_multiple(rng, click_trace_sample_size);
+            client_to_sample_idx_map.insert(client, sampled_idx);
+        } else {
+            let sampled_idx = idx_list
+                .into_iter()
+                .choose_multiple(rng, click_traces_list.len());
+            client_to_sample_idx_map.insert(client, sampled_idx);
+        }
     }
     client_to_sample_idx_map
 }
 
 fn eval(
-    conf: &Properties,
+    config: &Config,
     client_to_hist_map: &HashMap<u32, Vec<ClickTrace>>,
     client_to_target_idx_map: &HashMap<u32, usize>,
-    client_to_sample_idx_map: Option<&HashMap<u32, Vec<usize>>>,
+    client_to_sample_idx_map: &HashMap<u32, Vec<usize>>,
 ) {
-    let fields: Vec<DataFields> = conf
-        .get("fields")
-        .unwrap()
-        .split(",")
-        .map(|x| DataFields::from_str(x).unwrap())
-        .collect();
-    let metric = DistanceMetrics::from_str(conf.get("metric").unwrap()).unwrap();
-
-    let is_typical_session = conf
-        .get("is_typical_session")
-        .unwrap()
-        .parse::<bool>()
-        .unwrap();
-
     let result_list: Vec<(u32, u32, bool, bool)> = client_to_target_idx_map
         .par_iter()
         .map(|(client, target_idx)| {
             eval_step(
-                is_typical_session,
-                &fields,
-                &metric,
+                config,
                 client,
                 target_idx,
                 &client_to_hist_map,
@@ -179,14 +158,13 @@ fn eval(
 }
 
 fn eval_step(
-    is_typical_session: bool,
-    fields: &Vec<DataFields>,
-    metric: &DistanceMetrics,
+    config: &Config,
     client_target: &u32,
     target_idx: &usize,
     client_to_hist_map: &HashMap<u32, Vec<ClickTrace>>,
-    client_to_sample_idx_map: Option<&HashMap<u32, Vec<usize>>>,
+    client_to_sample_idx_map: &HashMap<u32, Vec<usize>>,
 ) -> (u32, u32, bool, bool) {
+    let metric = DistanceMetric::from_str(&config.metric).unwrap();
     let target_hist = client_to_hist_map
         .get(client_target)
         .unwrap()
@@ -196,50 +174,39 @@ fn eval_step(
     let mut tuples: Vec<(OrderedFloat<f64>, u32)> = Vec::with_capacity(client_to_hist_map.len());
 
     for (client, click_traces) in client_to_hist_map.into_iter() {
-        if is_typical_session {
-            let hists = client_to_hist_map.get(client).unwrap();
+        let samples_idx = client_to_sample_idx_map.get(client).unwrap();
+        let sampled_hists: Vec<ClickTrace> = samples_idx
+            .into_iter()
+            .map(|idx| click_traces.get(*idx).unwrap().clone())
+            .collect();
 
-            let (website_set, code_set, location_set, category_set) =
-                utils::get_unique_sets(&target_hist, hists);
+        let (website_set, code_set, location_set, category_set) =
+            utils::get_unique_sets(target_hist, &sampled_hists);
 
-            let vectorized_target = utils::vect_hist(
-                target_hist,
-                &website_set,
-                &code_set,
-                &location_set,
-                &category_set,
-            );
+        let vectorized_target = utils::vect_hist(
+            target_hist,
+            &website_set,
+            &code_set,
+            &location_set,
+            &category_set,
+        );
 
+        if config.typical {
             let vect_typ_click_trace = utils::get_typ_click_trace(
-                hists,
+                &sampled_hists,
                 &website_set,
                 &code_set,
                 &location_set,
                 &category_set,
             );
-
-            let dist = compute_dist(fields, metric, &vectorized_target, &vect_typ_click_trace);
+            let dist = compute_dist(
+                &config.fields,
+                &metric,
+                &vectorized_target,
+                &vect_typ_click_trace,
+            );
             tuples.push((OrderedFloat(dist), client.clone()));
         } else {
-            let client_to_sample_idx_map = client_to_sample_idx_map.unwrap();
-            let samples_idx = client_to_sample_idx_map.get(client).unwrap();
-
-            let sampled_hists: Vec<ClickTrace> = samples_idx
-                .into_iter()
-                .map(|idx| click_traces.get(*idx).unwrap().clone())
-                .collect();
-
-            let (website_set, code_set, location_set, category_set) =
-                utils::get_unique_sets(target_hist, &sampled_hists);
-
-            let vectorized_target = utils::vect_hist(
-                target_hist,
-                &website_set,
-                &code_set,
-                &location_set,
-                &category_set,
-            );
-
             for sample_hist in sampled_hists.into_iter() {
                 let vectorized_ref = utils::vect_hist(
                     &sample_hist,
@@ -248,7 +215,8 @@ fn eval_step(
                     &location_set,
                     &category_set,
                 );
-                let dist = compute_dist(fields, metric, &vectorized_target, &vectorized_ref);
+                let dist =
+                    compute_dist(&config.fields, &metric, &vectorized_target, &vectorized_ref);
                 tuples.push((OrderedFloat(dist), client.clone()));
             }
         }
@@ -256,7 +224,7 @@ fn eval_step(
     tuples.sort_unstable_by_key(|k| k.0);
     let cutoff: usize = (0.1 * client_to_hist_map.len() as f64) as usize;
     let is_top_10_percent = utils::is_target_in_top_k(client_target, &tuples[..cutoff]);
-    let is_top_10: bool = utils::is_target_in_top_k(client_target, &tuples[..10]);
+    let is_top_10: bool = utils::is_target_in_top_k(client_target, &tuples[..1]);
     (
         client_target.clone(),
         tuples[0].1,
@@ -268,7 +236,7 @@ fn eval_step(
 // Calculate the distance between the target and the reference click trace
 fn compute_dist(
     fields: &Vec<DataFields>,
-    metric: &DistanceMetrics,
+    metric: &DistanceMetric,
     target_click_trace: &ClickTraceVect,
     ref_click_trace: &ClickTraceVect,
 ) -> f64 {
@@ -297,23 +265,21 @@ fn compute_dist(
         };
 
         let dist = match metric {
-            DistanceMetrics::Euclidean => metrics::euclidean_dist(target_vector, ref_vector),
-            DistanceMetrics::Manhatten => metrics::manhatten_dist(target_vector, ref_vector),
-            DistanceMetrics::Cosine => metrics::consine_dist(target_vector, ref_vector),
-            DistanceMetrics::Jaccard => metrics::jaccard_dist(target_vector, ref_vector),
-            DistanceMetrics::Bhattacharyya => {
-                metrics::bhattacharyya_dist(target_vector, ref_vector)
-            }
-            DistanceMetrics::KullbrackLeibler => {
+            DistanceMetric::Euclidean => metrics::euclidean_dist(target_vector, ref_vector),
+            DistanceMetric::Manhatten => metrics::manhatten_dist(target_vector, ref_vector),
+            DistanceMetric::Cosine => metrics::consine_dist(target_vector, ref_vector),
+            DistanceMetric::Jaccard => metrics::jaccard_dist(target_vector, ref_vector),
+            DistanceMetric::Bhattacharyya => metrics::bhattacharyya_dist(target_vector, ref_vector),
+            DistanceMetric::KullbrackLeibler => {
                 metrics::kullbrack_leibler_dist(target_vector, ref_vector)
             }
-            DistanceMetrics::TotalVariation => {
+            DistanceMetric::TotalVariation => {
                 metrics::total_variation_dist(target_vector, ref_vector)
             }
-            DistanceMetrics::JeffriesMatusita => {
+            DistanceMetric::JeffriesMatusita => {
                 metrics::jeffries_matusita_dist(target_vector, ref_vector)
             }
-            DistanceMetrics::ChiSquared => metrics::chi_squared_dist(target_vector, ref_vector),
+            DistanceMetric::ChiSquared => metrics::chi_squared_dist(target_vector, ref_vector),
         };
         total_dist.push(dist);
     }
