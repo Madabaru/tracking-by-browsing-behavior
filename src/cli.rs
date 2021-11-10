@@ -164,8 +164,6 @@ pub fn get_cli_config() -> Result<Config, core::fmt::Error>{
             .unwrap_or_default()
             .parse::<bool>().unwrap(),
     };
-
-    println!("{:?}", config);
     Ok(config)
 }
 

@@ -72,7 +72,7 @@ pub fn bhattacharyya_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
     -f64::log(dist, E)
 }
 
-pub fn kullbrack_leibler_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
+pub fn kl_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
     let target_matrix = maths::vec_to_matrix(target_vec, true);
     let ref_matrix = maths::vec_to_matrix(ref_vec, true);
     let eps = f64::EPSILON;
@@ -85,7 +85,7 @@ pub fn kullbrack_leibler_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
     -dist
 }
 
-pub fn total_variation_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
+pub fn total_var_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
     let target_matrix = maths::vec_to_matrix(target_vec, true);
     let ref_matrix = maths::vec_to_matrix(ref_vec, true);
     let dist = target_matrix.zip_fold(&ref_matrix, 0.0, |acc, a, b| {
@@ -95,7 +95,7 @@ pub fn total_variation_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
     dist
 }
 
-pub fn jeffries_matusita_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
+pub fn jeffries_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
     let target_matrix = maths::vec_to_matrix(target_vec, true);
     let ref_matrix = maths::vec_to_matrix(ref_vec, true);
     let sq_sum = target_matrix.zip_fold(&ref_matrix, 0.0, |acc, a, b| {

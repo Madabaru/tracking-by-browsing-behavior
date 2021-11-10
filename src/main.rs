@@ -11,7 +11,6 @@ use std::io::prelude::*;
 use std::io::BufWriter;
 use std::str::FromStr;
 
-use cli::Config;
 use rayon::prelude::*;
 
 use rand::{rngs::StdRng, SeedableRng};
@@ -110,7 +109,7 @@ fn get_train_data<R: Rng>(
 }
 
 fn eval(
-    config: &Config,
+    config: &cli::Config,
     client_to_hist_map: &HashMap<u32, Vec<ClickTrace>>,
     client_to_target_idx_map: &HashMap<u32, usize>,
     client_to_sample_idx_map: &HashMap<u32, Vec<usize>>,
@@ -158,7 +157,7 @@ fn eval(
 }
 
 fn eval_step(
-    config: &Config,
+    config: &cli::Config,
     client_target: &u32,
     target_idx: &usize,
     client_to_hist_map: &HashMap<u32, Vec<ClickTrace>>,
@@ -262,6 +261,11 @@ fn compute_dist(
                 target_click_trace.category.clone(),
                 ref_click_trace.category.clone(),
             ),
+            DataFields::Day => (target_click_trace.day.clone(), ref_click_trace.day.clone()),
+            DataFields::Hour => (
+                target_click_trace.hour.clone(),
+                ref_click_trace.hour.clone(),
+            ),
         };
 
         let dist = match metric {
@@ -270,15 +274,9 @@ fn compute_dist(
             DistanceMetric::Cosine => metrics::consine_dist(target_vector, ref_vector),
             DistanceMetric::Jaccard => metrics::jaccard_dist(target_vector, ref_vector),
             DistanceMetric::Bhattacharyya => metrics::bhattacharyya_dist(target_vector, ref_vector),
-            DistanceMetric::KullbrackLeibler => {
-                metrics::kullbrack_leibler_dist(target_vector, ref_vector)
-            }
-            DistanceMetric::TotalVariation => {
-                metrics::total_variation_dist(target_vector, ref_vector)
-            }
-            DistanceMetric::JeffriesMatusita => {
-                metrics::jeffries_matusita_dist(target_vector, ref_vector)
-            }
+            DistanceMetric::KullbrackLeibler => metrics::kl_dist(target_vector, ref_vector),
+            DistanceMetric::TotalVariation => metrics::total_var_dist(target_vector, ref_vector),
+            DistanceMetric::JeffriesMatusita => metrics::jeffries_dist(target_vector, ref_vector),
             DistanceMetric::ChiSquared => metrics::chi_squared_dist(target_vector, ref_vector),
         };
         total_dist.push(dist);

@@ -32,16 +32,21 @@ pub fn vect_hist(
     location_set: &IndexSet<String>,
     category_set: &IndexSet<String>,
 ) -> ClickTraceVect {
+    
     let website_vec = gen_vec_from_freq_map(&click_trace.website, website_set);
     let code_vec = gen_vec_from_freq_map(&click_trace.code, code_set);
     let location_vec = gen_vec_from_str(&click_trace.location, location_set);
     let category_vec = gen_vec_from_freq_map(&click_trace.category, category_set);
+    let day_vec = click_trace.hour.clone();
+    let hour_vec = click_trace.day.clone();
 
     let click_trace_vecized = ClickTraceVect {
         website: website_vec,
         code: code_vec,
         location: location_vec,
         category: category_vec,
+        day: day_vec,
+        hour: hour_vec
     };
     click_trace_vecized
 }
@@ -86,6 +91,8 @@ pub fn get_typ_click_trace(
     let mut code_vec = maths::zeros_u32(code_set.len());
     let mut location_vec = maths::zeros_u32(location_set.len());
     let mut category_vec = maths::zeros_u32(category_set.len());
+    let mut hour_vec = maths::zeros_u32(24);
+    let mut day_vec = maths::zeros_u32(24);
 
     for hist in hists.into_iter() {
         let hist_vect = vect_hist(hist, website_set, code_set, location_set, category_set);
@@ -93,6 +100,8 @@ pub fn get_typ_click_trace(
         code_vec = maths::add(code_vec, &hist_vect.code);
         location_vec = maths::add(location_vec, &hist_vect.location);
         category_vec = maths::add(category_vec, &hist_vect.category);
+        day_vec = maths::add(day_vec, &hist_vect.day);
+        hour_vec = maths::add(hour_vec, &hist_vect.hour);
     }
 
     let website_len = website_vec.len() as u32;
@@ -103,12 +112,18 @@ pub fn get_typ_click_trace(
     location_vec.iter_mut().for_each(|a| *a /= location_len);
     let category_len = category_vec.len() as u32;
     category_vec.iter_mut().for_each(|a| *a /= category_len);
+    let hour_len = category_vec.len() as u32;
+    hour_vec.iter_mut().for_each(|a| *a /= hour_len);
+    let day_len = category_vec.len() as u32;
+    day_vec.iter_mut().for_each(|a| *a /= day_len);
 
     let typical_click_trace_vecized = ClickTraceVect {
         website: website_vec,
         code: code_vec,
         location: location_vec,
         category: category_vec,
+        day: day_vec,
+        hour: hour_vec
     };
     typical_click_trace_vecized
 }

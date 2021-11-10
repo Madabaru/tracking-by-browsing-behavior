@@ -20,6 +20,8 @@ pub enum DataFields {
     Code,
     Location,
     Category,
+    Day,
+    Hour
 }
 
 impl FromStr for DataFields {
@@ -30,6 +32,8 @@ impl FromStr for DataFields {
             "code" => Ok(Self::Code),
             "location" => Ok(Self::Location),
             "category" => Ok(Self::Category),
+            "day" => Ok(Self::Day),
+            "hour" => Ok(Self::Hour),
             x => panic!("wrong data field supplied: {:?}", x),
         }
     }

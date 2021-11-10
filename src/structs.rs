@@ -29,7 +29,9 @@ pub struct ClickTrace {
      pub website: Vec<u32>,
      pub code: Vec<u32>,
      pub location: Vec<u32>,
-     pub category: Vec<u32>
+     pub category: Vec<u32>,
+     pub hour: Vec<u32>,
+     pub day: Vec<u32>
  }
 
 
