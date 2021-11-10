@@ -103,7 +103,7 @@ pub fn get_cli_config() -> Result<Config, core::fmt::Error>{
         .arg(
             clap::Arg::new("typical")
                 .long("typical")
-                .default_value("false")
+                .default_value("true")
                 .about("Set to true if you want to compute a typical click trace (session) per client.")
         )
         .get_matches();

@@ -20,8 +20,7 @@ use rand::{seq::IteratorRandom, Rng};
 use ordered_float::OrderedFloat;
 use parse::DataFields;
 use structs::{ClickTrace, ClickTraceVect};
-
-use crate::metrics::DistanceMetric;
+use metrics::DistanceMetric;
 
 fn main() {
     // Load config
@@ -93,17 +92,14 @@ fn get_train_data<R: Rng>(
         let client = client.clone();
         let click_trace_len = click_traces_list.len();
         let split_idx = click_trace_len / 2;
-        let idx_list: Vec<usize> = (0..split_idx).collect();
+        let indices: Vec<usize> = (0..split_idx).collect();
         if click_trace_sample_size > 0 {
-            let sampled_idx = idx_list
+            let sampled_idx = indices
                 .into_iter()
                 .choose_multiple(rng, click_trace_sample_size);
             client_to_sample_idx_map.insert(client, sampled_idx);
         } else {
-            let sampled_idx = idx_list
-                .into_iter()
-                .choose_multiple(rng, click_traces_list.len());
-            client_to_sample_idx_map.insert(client, sampled_idx);
+            client_to_sample_idx_map.insert(client, indices);
         }
     }
     client_to_sample_idx_map
@@ -150,8 +146,8 @@ fn eval(
     let top_10_percent: f64 = top_10_percent_count as f64 / result_list.len() as f64;
     println!("Top 10 Percent: {:?}", top_10_percent);
 
-    let write_file = File::create("tmp/output").unwrap();
-    let mut writer = BufWriter::new(&write_file);
+    let file = File::create("tmp/output").unwrap();
+    let mut writer = BufWriter::new(&file);
     for i in result_list {
         write!(writer, "{},{} \n", i.0, i.1).expect("Unable to write to output file.");
     }
@@ -176,7 +172,7 @@ fn eval_step(
     client_to_hist_map: &HashMap<u32, Vec<ClickTrace>>,
     client_to_sample_idx_map: &HashMap<u32, Vec<usize>>,
 ) -> (u32, u32, bool, bool) {
-    let metric = DistanceMetric::from_str(&config.metric).unwrap();
+    let metric = metrics::DistanceMetric::from_str(&config.metric).unwrap();
     let target_hist = client_to_hist_map
         .get(client_target)
         .unwrap()
