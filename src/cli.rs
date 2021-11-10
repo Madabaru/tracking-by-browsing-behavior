@@ -36,6 +36,7 @@ pub fn get_cli_config() -> Result<Config, core::fmt::Error>{
                 .long("fields")
                 .possible_values(&["website", "category", "code", "location", "hour", "day"])
                 .about("Data fields to consider for the analysis.")
+                .multiple_values(true)
                 .default_values(&["website", "category", "code", "location"])
         )
         .arg(

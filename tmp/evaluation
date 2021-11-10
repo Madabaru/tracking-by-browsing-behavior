@@ -1,0 +1,30 @@
+Experiment: Config { delay_limit: 1800.0, fields: [Website, Category], max_click_trace_len: 1000, min_click_trace_len: 3, max_click_trace_duration: 86400.0, max_click_rate: 2.0, min_num_click_traces: 2, client_sample_size: 10, click_trace_sample_size: 3, metric: "euclidean", path: "data/test.csv", seed: 0, typical: false }
+Top 10: 0.4
+Top 10 Percent: 0.7
+Experiment: Config { delay_limit: 1800.0, fields: [Website, Category], max_click_trace_len: 1000, min_click_trace_len: 3, max_click_trace_duration: 86400.0, max_click_rate: 2.0, min_num_click_traces: 2, client_sample_size: 10, click_trace_sample_size: 3, metric: "euclidean", path: "data/test.csv", seed: 0, typical: false }
+Top 10: 0
+Top 10 Percent: 0.5
+Experiment: Config { delay_limit: 1800.0, fields: [Website, Category], max_click_trace_len: 1000, min_click_trace_len: 3, max_click_trace_duration: 86400.0, max_click_rate: 2.0, min_num_click_traces: 2, client_sample_size: 10, click_trace_sample_size: 3, metric: "euclidean", path: "data/test.csv", seed: 0, typical: false }
+Top 10: 0.1
+Top 10 Percent: 0.8
+Experiment: Config { delay_limit: 1800.0, fields: [Website, Category], max_click_trace_len: 1000, min_click_trace_len: 3, max_click_trace_duration: 86400.0, max_click_rate: 2.0, min_num_click_traces: 2, client_sample_size: 10, click_trace_sample_size: 3, metric: "euclidean", path: "data/test.csv", seed: 0, typical: false }
+Top 10: 0.2
+Top 10 Percent: 0.6
+Accuracy: 0.2
+F1-Score (Macro): 0.1111111111111111
+F1-Score (Micro): 0.20000000000000004
+Recall (Macro): 0.1111111111111111
+Recall (Macro): 0.2
+Precision (Micro): 0.1111111111111111
+Precision (Micro): 0.2
+-----------------------------------------------
+Experiment: Config { delay_limit: 1800.0, fields: [Website, Category], max_click_trace_len: 1000, min_click_trace_len: 3, max_click_trace_duration: 86400.0, max_click_rate: 2.0, min_num_click_traces: 2, client_sample_size: 10, click_trace_sample_size: 3, metric: "euclidean", path: "data/test.csv", seed: 0, typical: false }
+Top 10: 0.2
+Top 10 Percent: 1
+Accuracy: 0.16666666666666666
+F1-Score (Macro): 0.0980392156862745
+F1-Score (Micro): 0.20000000000000004
+Recall (Macro): 0.11764705882352941
+Recall (Macro): 0.2
+Precision (Micro): 0.08823529411764706
+Precision (Micro): 0.2

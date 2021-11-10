@@ -11,6 +11,15 @@ with open("tmp/output") as file:
         target.append(int(split[0]))
         pred.append(int(split[1]))
 
+with open("tmp/evaluation", "a") as file:
+    file.write("Accuracy: " + str(f1_score(target, pred, average='weighted')) + "\n")
+    file.write("F1-Score (Macro): " + str(f1_score(target, pred, average='macro')) + "\n")
+    file.write("F1-Score (Micro): " + str(f1_score(target, pred, average='micro')) + "\n")
+    file.write("Recall (Macro): " + str(recall_score(target, pred, average='macro')) + "\n")
+    file.write("Recall (Macro): " + str(recall_score(target, pred, average='micro')) + "\n")
+    file.write("Precision (Micro): " + str(precision_score(target, pred, average='macro')) + "\n")
+    file.write("Precision (Micro): " + str(precision_score(target, pred, average='micro')) + "\n")
+
 print("Accuracy: ", f1_score(target, pred, average='weighted'))
 print("F1-Score (Macro): ", f1_score(target, pred, average='macro'))
 print("F1-Score (Micro): ", f1_score(target, pred, average='micro'))

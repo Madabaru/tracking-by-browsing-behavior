@@ -7,6 +7,7 @@ pub mod utils;
 
 use std::collections::HashMap;
 use std::fs::File;
+use std::fs::OpenOptions;
 use std::io::prelude::*;
 use std::io::BufWriter;
 use std::str::FromStr;
@@ -152,8 +153,20 @@ fn eval(
     let write_file = File::create("tmp/output").unwrap();
     let mut writer = BufWriter::new(&write_file);
     for i in result_list {
-        writer.write_fmt(format_args!("{},{} \n", i.0, i.1));
+        write!(writer, "{},{} \n", i.0, i.1).expect("Unable to write to output file.");
     }
+
+    let mut file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open("tmp/evaluation")
+        .unwrap();
+    write!(
+        file,
+        "-----------------------------------------------\nExperiment: {:?}\nTop 10: {}\nTop 10 Percent: {}\n",
+        config, top_10, top_10_percent
+    )
+    .expect("Unable to write to evaluation file.")
 }
 
 fn eval_step(
