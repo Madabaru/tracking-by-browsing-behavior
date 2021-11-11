@@ -2,7 +2,7 @@ pub mod cli;
 pub mod maths;
 pub mod metrics;
 pub mod parse;
-pub mod structs;
+pub mod click_trace;
 pub mod utils;
 
 use std::collections::HashMap;
@@ -19,7 +19,7 @@ use rand::{seq::IteratorRandom, Rng};
 
 use ordered_float::OrderedFloat;
 use parse::DataFields;
-use structs::{ClickTrace, ClickTraceVect};
+use click_trace::{ClickTrace, VectClickTrace};
 use metrics::DistanceMetric;
 
 fn main() {
@@ -191,7 +191,7 @@ fn eval_step(
         let (website_set, code_set, location_set, category_set) =
             utils::get_unique_sets(target_hist, &sampled_hists);
 
-        let vectorized_target = utils::vect_hist(
+        let vectorized_target = utils::vectorize_hist(
             target_hist,
             &website_set,
             &code_set,
@@ -216,7 +216,7 @@ fn eval_step(
             tuples.push((OrderedFloat(dist), client.clone()));
         } else {
             for sample_hist in sampled_hists.into_iter() {
-                let vectorized_ref = utils::vect_hist(
+                let vectorized_ref = utils::vectorize_hist(
                     &sample_hist,
                     &website_set,
                     &code_set,
@@ -245,8 +245,8 @@ fn eval_step(
 fn compute_dist(
     fields: &Vec<DataFields>,
     metric: &DistanceMetric,
-    target_click_trace: &ClickTraceVect,
-    ref_click_trace: &ClickTraceVect,
+    target_click_trace: &VectClickTrace,
+    ref_click_trace: &VectClickTrace,
 ) -> f64 {
     // Vector to store distance scores for each data field to be considered
     let mut total_dist = Vec::<f64>::with_capacity(fields.len());

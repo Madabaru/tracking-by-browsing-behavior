@@ -9,10 +9,22 @@ use chrono::prelude::DateTime;
 use chrono::Datelike;
 use chrono::{Timelike, Utc};
 
+use serde::Deserialize;
+
 use crate::cli::Config;
+use crate::click_trace::ClickTrace;
 use crate::maths;
-use crate::structs::ClickTrace;
-use crate::structs::Record;
+
+
+#[derive(Debug, Deserialize)]
+pub struct Record {
+    pub client_id: String,
+    pub timestamp: f64,
+    pub website: String,
+    pub code: String,
+    pub location: String,
+    pub category: String,
+}
 
 #[derive(PartialEq, Debug)]
 pub enum DataFields {
@@ -48,8 +60,6 @@ pub fn parse_to_hist(config: &Config) -> Result<HashMap<u32, Vec<ClickTrace>>, B
 
     let mut client_to_hist_map: HashMap<u32, Vec<ClickTrace>> = HashMap::new();
     let mut reader = csv::Reader::from_path(&config.path)?;
-
-    // reader.set_headers(csv::StringRecord::from(vec!["client_id", "timestamp", "website", "code", "location", "category"]));
 
     for result in reader.deserialize() {
         let record: Record = result?;
@@ -102,6 +112,7 @@ pub fn parse_to_hist(config: &Config) -> Result<HashMap<u32, Vec<ClickTrace>>, B
         // Extract day and hour from unix timestamp
         let date = UNIX_EPOCH + Duration::from_secs_f64(record.timestamp.clone());
         let datetime = DateTime::<Utc>::from(date);
+        
         // Convert from u32 to usize
         let hour_index: usize = usize::try_from(datetime.hour()).unwrap();
         let day_index: usize = usize::try_from(datetime.weekday().num_days_from_monday()).unwrap();
@@ -132,7 +143,7 @@ pub fn parse_to_hist(config: &Config) -> Result<HashMap<u32, Vec<ClickTrace>>, B
     }
 
     // Remove any client with less than the minimum number of click traces
-    println!("{:?}", client_to_hist_map.keys().len());
+    println!("Number of Clietn{:?}", client_to_hist_map.keys().len());
     client_to_hist_map.retain(|_, value| value.len() >= config.min_num_click_traces);
     println!("{:?}", client_to_hist_map.keys().len());
     Ok(client_to_hist_map)

@@ -1,59 +1,56 @@
-use crate::maths;
-use crate::structs::{ClickTrace, ClickTraceVect};
-
 use std::collections::HashMap;
 use std::iter::FromIterator;
-use std::vec;
 
 use indexmap::set::IndexSet;
+
 use ordered_float::OrderedFloat;
 
-pub fn gen_vec_from_freq_map(
+use crate::click_trace::{ClickTrace, VectClickTrace};
+use crate::maths;
+
+pub fn gen_vector_from_freq_map(
     type_to_freq_map: &HashMap<String, u32>,
     set: &IndexSet<String>,
 ) -> Vec<u32> {
-    let mut vec: Vec<u32> = vec![0; set.len()];
+    let mut vector: Vec<u32> = vec![0; set.len()];
     for (key, value) in type_to_freq_map.into_iter() {
-        vec[set.get_full(key).unwrap().0] = value.clone();
+        vector[set.get_full(key).unwrap().0] = value.clone();
     }
-    vec
+    vector
 }
 
-pub fn gen_vec_from_str(s: &str, set: &IndexSet<String>) -> Vec<u32> {
-    let mut vec: Vec<u32> = vec![0; set.len()];
-    vec[set.get_full(s).unwrap().0] = 1;
-    vec
+pub fn gen_vector_from_str(s: &str, set: &IndexSet<String>) -> Vec<u32> {
+    let mut vector: Vec<u32> = vec![0; set.len()];
+    vector[set.get_full(s).unwrap().0] = 1;
+    vector
 }
 
-pub fn vect_hist(
+pub fn is_target_in_top_k(client_target: &u32, tuples: &[(OrderedFloat<f64>, u32)]) -> bool {
+    tuples.iter().any(|(_, b)| b == client_target)
+}
+
+// Transform each histogram (as a hashmap) in a click trace into a vector to speed up further computations
+pub fn vectorize_hist(
     click_trace: &ClickTrace,
     website_set: &IndexSet<String>,
     code_set: &IndexSet<String>,
     location_set: &IndexSet<String>,
     category_set: &IndexSet<String>,
-) -> ClickTraceVect {
-    
-    let website_vec = gen_vec_from_freq_map(&click_trace.website, website_set);
-    let code_vec = gen_vec_from_freq_map(&click_trace.code, code_set);
-    let location_vec = gen_vec_from_str(&click_trace.location, location_set);
-    let category_vec = gen_vec_from_freq_map(&click_trace.category, category_set);
-    let day_vec = click_trace.hour.clone();
-    let hour_vec = click_trace.day.clone();
-
-    let click_trace_vecized = ClickTraceVect {
-        website: website_vec,
-        code: code_vec,
-        location: location_vec,
-        category: category_vec,
-        day: day_vec,
-        hour: hour_vec
+) -> VectClickTrace {
+    let vectorized_click_trace = VectClickTrace {
+        website: gen_vector_from_freq_map(&click_trace.website, website_set),
+        code: gen_vector_from_freq_map(&click_trace.code, code_set),
+        location: gen_vector_from_str(&click_trace.location, location_set),
+        category: gen_vector_from_freq_map(&click_trace.category, category_set),
+        day: click_trace.hour.clone(),
+        hour: click_trace.day.clone(),
     };
-    click_trace_vecized
+    vectorized_click_trace
 }
 
 pub fn get_unique_sets(
     target_hist: &ClickTrace,
-    sampled_hists: &Vec<ClickTrace>, // &ClickTrace
+    sampled_hists: &Vec<ClickTrace>,
 ) -> (
     IndexSet<String>,
     IndexSet<String>,
@@ -86,16 +83,16 @@ pub fn get_typ_click_trace(
     code_set: &IndexSet<String>,
     location_set: &IndexSet<String>,
     category_set: &IndexSet<String>,
-) -> ClickTraceVect {
+) -> VectClickTrace {
     let mut website_vec = maths::zeros_u32(website_set.len());
     let mut code_vec = maths::zeros_u32(code_set.len());
     let mut location_vec = maths::zeros_u32(location_set.len());
     let mut category_vec = maths::zeros_u32(category_set.len());
     let mut hour_vec = maths::zeros_u32(24);
-    let mut day_vec = maths::zeros_u32(24);
+    let mut day_vec = maths::zeros_u32(7);
 
     for hist in hists.into_iter() {
-        let hist_vect = vect_hist(hist, website_set, code_set, location_set, category_set);
+        let hist_vect = vectorize_hist(hist, website_set, code_set, location_set, category_set);
         website_vec = maths::add(website_vec, &hist_vect.website);
         code_vec = maths::add(code_vec, &hist_vect.code);
         location_vec = maths::add(location_vec, &hist_vect.location);
@@ -117,18 +114,14 @@ pub fn get_typ_click_trace(
     let day_len = category_vec.len() as u32;
     day_vec.iter_mut().for_each(|a| *a /= day_len);
 
-    let typical_click_trace_vecized = ClickTraceVect {
+    let typ_vectorized_click_trace = VectClickTrace {
         website: website_vec,
         code: code_vec,
         location: location_vec,
         category: category_vec,
         day: day_vec,
-        hour: hour_vec
+        hour: hour_vec,
     };
-    typical_click_trace_vecized
+    typ_vectorized_click_trace
 }
 
-
-pub fn is_target_in_top_k(client_target: &u32, tuples: &[(OrderedFloat<f64>, u32)]) -> bool {
-    tuples.iter().any(|(_, b)| b == client_target)
-}
