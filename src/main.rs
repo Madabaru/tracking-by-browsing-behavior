@@ -191,7 +191,7 @@ fn eval_step(
         let (website_set, code_set, location_set, category_set) =
             utils::get_unique_sets(target_hist, &sampled_hists);
 
-        let vectorized_target = utils::vectorize_hist(
+        let vectorized_target = click_trace::vectorize_click_trace(
             target_hist,
             &website_set,
             &code_set,
@@ -200,7 +200,7 @@ fn eval_step(
         );
 
         if config.typical {
-            let vect_typ_click_trace = utils::get_typ_click_trace(
+            let vect_typ_click_trace = click_trace::gen_typ_vectorized_click_trace(
                 &sampled_hists,
                 &website_set,
                 &code_set,
@@ -216,7 +216,7 @@ fn eval_step(
             tuples.push((OrderedFloat(dist), client.clone()));
         } else {
             for sample_hist in sampled_hists.into_iter() {
-                let vectorized_ref = utils::vectorize_hist(
+                let vectorized_ref = click_trace::vectorize_click_trace(
                     &sample_hist,
                     &website_set,
                     &code_set,

@@ -143,7 +143,7 @@ pub fn parse_to_hist(config: &Config) -> Result<HashMap<u32, Vec<ClickTrace>>, B
     }
 
     // Remove any client with less than the minimum number of click traces
-    println!("Number of Clietn{:?}", client_to_hist_map.keys().len());
+    println!("{:?}", client_to_hist_map.keys().len());
     client_to_hist_map.retain(|_, value| value.len() >= config.min_num_click_traces);
     println!("{:?}", client_to_hist_map.keys().len());
     Ok(client_to_hist_map)
