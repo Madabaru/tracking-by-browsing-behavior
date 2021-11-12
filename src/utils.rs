@@ -1,5 +1,5 @@
-#[path = "frequency/freq_click_trace.rs"] mod freq_click_trace;
-use crate::FreqClickTrace;
+
+use crate::frequency::click_trace::FreqClickTrace;
 
 use std::collections::HashMap;
 use std::iter::FromIterator;

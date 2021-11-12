@@ -1,7 +1,7 @@
 use crate::cli::Config;
 use crate::frequency::maths;
-use crate::frequency::freq_click_trace::FreqClickTrace;
-use crate::sequence::seq_click_trace::SeqClickTrace;
+use crate::frequency::click_trace::FreqClickTrace;
+use crate::sequence::click_trace::SeqClickTrace;
 
 use std::collections::HashMap;
 use std::convert::TryFrom;
@@ -55,7 +55,7 @@ impl FromStr for DataFields {
     }
 }
 
-pub fn parse_to_hist(config: &Config) -> Result<HashMap<u32, Vec<FreqClickTrace>>, Box<dyn Error>> {
+pub fn parse_to_frequency(config: &Config) -> Result<HashMap<u32, Vec<FreqClickTrace>>, Box<dyn Error>> {
     let mut prev_time: f64 = 0.0;
     let mut prev_client = String::new();
     let mut prev_location = String::new();
