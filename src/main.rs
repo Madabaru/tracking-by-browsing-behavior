@@ -6,6 +6,7 @@ mod sequence;
 mod utils;
 
 use frequency::click_trace::FreqClickTrace;
+
 use sequence::click_trace::SeqClickTrace;
 
 use rand::{rngs::StdRng, SeedableRng};

@@ -1,11 +1,10 @@
 use crate::frequency::maths;
 
 use nalgebra::EuclideanNorm;
+
 use nalgebra::LpNorm;
 
-use std::collections::HashSet;
-use std::f64::consts::E;
-use std::str::FromStr;
+use std::{collections::HashSet, f64::consts::E, str::FromStr};
 
 #[derive(Debug)]
 pub enum DistanceMetric {

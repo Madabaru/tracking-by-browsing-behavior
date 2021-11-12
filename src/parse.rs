@@ -1,24 +1,23 @@
 use crate::cli::Config;
-use crate::frequency::maths;
-use crate::frequency::click_trace::FreqClickTrace;
+
+use crate::frequency::{click_trace::FreqClickTrace, maths};
+
 use crate::sequence::click_trace::SeqClickTrace;
 
-use std::collections::HashMap;
-use std::convert::TryFrom;
-use std::error::Error;
-use std::str::FromStr;
-use std::string::ParseError;
-use std::time::{Duration, UNIX_EPOCH};
+use std::{
+    collections::HashMap,
+    convert::TryFrom,
+    error::Error,
+    str::FromStr,
+    string::ParseError,
+    time::{Duration, UNIX_EPOCH},
+};
 
-use chrono::prelude::DateTime;
-use chrono::Datelike;
-use chrono::{Timelike, Utc};
+use chrono::{prelude::DateTime, Datelike, Timelike, Utc};
 
 use indexmap::IndexSet;
+
 use serde::Deserialize;
-
-
-
 
 #[derive(Debug, Deserialize)]
 pub struct Record {
@@ -37,7 +36,7 @@ pub enum DataFields {
     Location,
     Category,
     Day,
-    Hour
+    Hour,
 }
 
 impl FromStr for DataFields {
@@ -55,7 +54,9 @@ impl FromStr for DataFields {
     }
 }
 
-pub fn parse_to_frequency(config: &Config) -> Result<HashMap<u32, Vec<FreqClickTrace>>, Box<dyn Error>> {
+pub fn parse_to_frequency(
+    config: &Config,
+) -> Result<HashMap<u32, Vec<FreqClickTrace>>, Box<dyn Error>> {
     let mut prev_time: f64 = 0.0;
     let mut prev_client = String::new();
     let mut prev_location = String::new();
@@ -116,11 +117,10 @@ pub fn parse_to_frequency(config: &Config) -> Result<HashMap<u32, Vec<FreqClickT
         // Extract day and hour from unix timestamp
         let date = UNIX_EPOCH + Duration::from_secs_f64(record.timestamp.clone());
         let datetime = DateTime::<Utc>::from(date);
-        
+
         // Convert from u32 to usize
         let hour_index: usize = usize::try_from(datetime.hour()).unwrap();
         let day_index: usize = usize::try_from(datetime.weekday().num_days_from_monday()).unwrap();
-        
 
         current_click_trace.hour[hour_index] += 1;
         current_click_trace.day[day_index] += 1;
@@ -154,8 +154,9 @@ pub fn parse_to_frequency(config: &Config) -> Result<HashMap<u32, Vec<FreqClickT
     Ok(client_to_hist_map)
 }
 
-
-pub fn parse_to_sequence(config: &Config) -> Result<HashMap<u32, Vec<SeqClickTrace>>, Box<dyn Error>>{
+pub fn parse_to_sequence(
+    config: &Config,
+) -> Result<HashMap<u32, Vec<SeqClickTrace>>, Box<dyn Error>> {
     let mut prev_time: f64 = 0.0;
     let mut prev_client = String::new();
     let mut prev_location = String::new();
@@ -168,7 +169,6 @@ pub fn parse_to_sequence(config: &Config) -> Result<HashMap<u32, Vec<SeqClickTra
     let mut website_set: IndexSet<String> = IndexSet::new();
     let mut code_set: IndexSet<String> = IndexSet::new();
     let mut category_set: IndexSet<String> = IndexSet::new();
-
 
     for result in reader.deserialize() {
         let record: Record = result?;
@@ -225,17 +225,22 @@ pub fn parse_to_sequence(config: &Config) -> Result<HashMap<u32, Vec<SeqClickTra
         website_set.insert(record.website.clone());
         code_set.insert(record.code.clone());
         category_set.insert(record.category.clone());
-        
+
         current_click_trace.hour.push(datetime.hour());
         current_click_trace.day = datetime.weekday().num_days_from_monday();
         current_click_trace.end_time = record.timestamp;
         current_click_trace.click_rate = click_trace_len as f64
             / (current_click_trace.end_time - current_click_trace.start_time);
-  
-        
-        current_click_trace.website.push(u32::try_from(website_set.get_full(&record.website).unwrap().0).unwrap());
-        current_click_trace.code.push(u32::try_from(code_set.get_full(&record.code).unwrap().0).unwrap());
-        current_click_trace.category.push(u32::try_from(category_set.get_full(&record.category).unwrap().0).unwrap());
+
+        current_click_trace
+            .website
+            .push(u32::try_from(website_set.get_full(&record.website).unwrap().0).unwrap());
+        current_click_trace
+            .code
+            .push(u32::try_from(code_set.get_full(&record.code).unwrap().0).unwrap());
+        current_click_trace
+            .category
+            .push(u32::try_from(category_set.get_full(&record.category).unwrap().0).unwrap());
 
         prev_time = record.timestamp;
         prev_client = record.client_id;

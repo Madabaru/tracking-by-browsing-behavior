@@ -2,6 +2,7 @@ use crate::frequency::maths;
 use crate::utils;
 
 use std::collections::HashMap;
+
 use indexmap::IndexSet;
 
 #[derive(Debug, Clone)]

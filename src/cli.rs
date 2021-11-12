@@ -1,6 +1,6 @@
-use std::str::FromStr;
 use crate::parse::DataFields;
 
+use std::str::FromStr;
 
 #[derive(Debug)]
 pub struct Config {
@@ -16,12 +16,10 @@ pub struct Config {
     pub metric: String,
     pub path: String,
     pub seed: u64,
-    pub typical: bool
+    pub typical: bool,
 }
 
-
-pub fn get_cli_config() -> Result<Config, core::fmt::Error>{
-
+pub fn get_cli_config() -> Result<Config, core::fmt::Error> {
     let matches = clap::App::new("Tracking-Users-by-Browsing-Behavior")
         .version("1.0")
         .author("Felix John")
@@ -108,12 +106,12 @@ pub fn get_cli_config() -> Result<Config, core::fmt::Error>{
         )
         .get_matches();
 
-
     let config = Config {
         delay_limit: matches
             .value_of("delay_limit")
             .unwrap_or_default()
-            .parse::<f64>().unwrap(),
+            .parse::<f64>()
+            .unwrap(),
         metric: matches
             .value_of("metric")
             .map(String::from)
@@ -121,7 +119,8 @@ pub fn get_cli_config() -> Result<Config, core::fmt::Error>{
         max_click_trace_len: matches
             .value_of("max_click_trace_len")
             .unwrap_or_default()
-            .parse::<usize>().unwrap(),
+            .parse::<usize>()
+            .unwrap(),
         fields: matches
             .values_of_lossy("fields")
             .unwrap_or_default()
@@ -131,27 +130,33 @@ pub fn get_cli_config() -> Result<Config, core::fmt::Error>{
         click_trace_sample_size: matches
             .value_of("click_trace_sample_size")
             .unwrap_or_default()
-            .parse::<usize>().unwrap(),
+            .parse::<usize>()
+            .unwrap(),
         client_sample_size: matches
             .value_of("client_sample_size")
             .unwrap_or_default()
-            .parse::<usize>().unwrap(),
+            .parse::<usize>()
+            .unwrap(),
         max_click_rate: matches
             .value_of("max_click_rate")
             .unwrap_or_default()
-            .parse::<f64>().unwrap(),
+            .parse::<f64>()
+            .unwrap(),
         max_click_trace_duration: matches
             .value_of("max_click_trace_duration")
             .unwrap_or_default()
-            .parse::<f64>().unwrap(),
+            .parse::<f64>()
+            .unwrap(),
         min_click_trace_len: matches
             .value_of("min_click_trace_len")
             .unwrap_or_default()
-            .parse::<usize>().unwrap(),
+            .parse::<usize>()
+            .unwrap(),
         min_num_click_traces: matches
             .value_of("min_num_click_traces")
             .unwrap_or_default()
-            .parse::<usize>().unwrap(),
+            .parse::<usize>()
+            .unwrap(),
         path: matches
             .value_of("path")
             .map(String::from)
@@ -159,12 +164,13 @@ pub fn get_cli_config() -> Result<Config, core::fmt::Error>{
         seed: matches
             .value_of("seed")
             .unwrap_or_default()
-            .parse::<u64>().unwrap(),
+            .parse::<u64>()
+            .unwrap(),
         typical: matches
             .value_of("typical")
             .unwrap_or_default()
-            .parse::<bool>().unwrap(),
+            .parse::<bool>()
+            .unwrap(),
     };
     Ok(config)
 }
-

@@ -9,9 +9,11 @@ use crate::frequency::{
     metrics::DistanceMetric,
 };
 
-use std::collections::HashMap;
-use std::io::{prelude::*, BufWriter};
-use std::str::FromStr;
+use std::{
+    collections::HashMap,
+    io::{prelude::*, BufWriter},
+    str::FromStr,
+};
 
 use rayon::prelude::*;
 

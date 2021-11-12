@@ -1,12 +1,10 @@
-
 use crate::frequency::click_trace::FreqClickTrace;
 
-use std::collections::HashMap;
-use std::iter::FromIterator;
+use std::{collections::HashMap, iter::FromIterator};
 
 use indexmap::set::IndexSet;
-use ordered_float::OrderedFloat;
 
+use ordered_float::OrderedFloat;
 
 pub fn gen_vector_from_freq_map(
     type_to_freq_map: &HashMap<String, u32>,
@@ -28,7 +26,6 @@ pub fn gen_vector_from_str(s: &str, set: &IndexSet<String>) -> Vec<u32> {
 pub fn is_target_in_top_k(client_target: &u32, tuples: &[(OrderedFloat<f64>, u32)]) -> bool {
     tuples.iter().any(|(_, b)| b == client_target)
 }
-
 
 pub fn get_unique_sets(
     target_hist: &FreqClickTrace,
@@ -58,6 +55,3 @@ pub fn get_unique_sets(
 
     (website_set, code_set, location_set, category_set)
 }
-
-
-
