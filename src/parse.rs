@@ -1,5 +1,10 @@
+use crate::cli::Config;
+use crate::frequency::maths;
+use crate::frequency::freq_click_trace::FreqClickTrace;
+use crate::sequence::seq_click_trace::SeqClickTrace;
+
 use std::collections::HashMap;
-use std::convert::{TryFrom, TryInto};
+use std::convert::TryFrom;
 use std::error::Error;
 use std::str::FromStr;
 use std::string::ParseError;
@@ -12,9 +17,7 @@ use chrono::{Timelike, Utc};
 use indexmap::IndexSet;
 use serde::Deserialize;
 
-use crate::cli::Config;
-use crate::click_trace::{FreqClickTrace, SeqClickTrace};
-use crate::maths;
+
 
 
 #[derive(Debug, Deserialize)]

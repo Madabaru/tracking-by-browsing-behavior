@@ -1,15 +1,13 @@
-pub mod cli;
-pub mod maths;
-pub mod metrics;
-pub mod parse;
-pub mod click_trace;
-pub mod utils;
+
+mod cli;
+mod parse;
+mod utils;
+mod frequency;
+mod sequence;
 
 use std::collections::HashMap;
-use std::fs::File;
-use std::fs::OpenOptions;
-use std::io::prelude::*;
-use std::io::BufWriter;
+use std::fs::{OpenOptions, File};
+use std::io::{prelude::*, BufWriter};
 use std::str::FromStr;
 
 use rayon::prelude::*;
@@ -19,8 +17,15 @@ use rand::{seq::IteratorRandom, Rng};
 
 use ordered_float::OrderedFloat;
 use parse::DataFields;
-use click_trace::{FreqClickTrace, VectFreqClickTrace, SeqClickTrace};
-use metrics::DistanceMetric;
+
+use frequency::freq_click_trace as fcl;
+use fcl::FreqClickTrace;
+use sequence::seq_click_trace as scl;
+use scl::SeqClickTrace;
+use frequency::metrics::DistanceMetric;
+
+
+
 
 fn main() {
     // Load config
@@ -33,35 +38,33 @@ fn main() {
     let client_to_seq_map: HashMap<u32, Vec<SeqClickTrace>> = parse::parse_to_sequence(&config).unwrap();
     let client_to_hist_map: HashMap<u32, Vec<FreqClickTrace>> = parse::parse_to_hist(&config).unwrap();
 
-    
+    let client_to_target_idx_map: HashMap<u32, usize> =
+        gen_test_data(&client_to_hist_map, &mut rng, config.client_sample_size);
 
-    // let client_to_target_idx_map: HashMap<u32, usize> =
-    //     gen_test_data(&client_to_hist_map, &mut rng, config.client_sample_size);
+    if !config.typical {
+        let client_to_sample_idx_map: HashMap<u32, Vec<usize>> = get_train_data(
+            &client_to_hist_map,
+            &mut rng,
+            config.click_trace_sample_size,
+        );
 
-    // if !config.typical {
-    //     let client_to_sample_idx_map: HashMap<u32, Vec<usize>> = get_train_data(
-    //         &client_to_hist_map,
-    //         &mut rng,
-    //         config.click_trace_sample_size,
-    //     );
+        eval(
+            &config,
+            &client_to_hist_map,
+            &client_to_target_idx_map,
+            &client_to_sample_idx_map,
+        );
+    } else {
+        let client_to_sample_idx_map: HashMap<u32, Vec<usize>> =
+            get_train_data(&client_to_hist_map, &mut rng, 0);
 
-    //     eval(
-    //         &config,
-    //         &client_to_hist_map,
-    //         &client_to_target_idx_map,
-    //         &client_to_sample_idx_map,
-    //     );
-    // } else {
-    //     let client_to_sample_idx_map: HashMap<u32, Vec<usize>> =
-    //         get_train_data(&client_to_hist_map, &mut rng, 0);
-
-    //     eval(
-    //         &config,
-    //         &client_to_hist_map,
-    //         &client_to_target_idx_map,
-    //         &client_to_sample_idx_map,
-    //     );
-    // }
+        eval(
+            &config,
+            &client_to_hist_map,
+            &client_to_target_idx_map,
+            &client_to_sample_idx_map,
+        );
+    }
 }
 
 // Sample a subset of clients and a target click trace that the evaluation is based upon
@@ -176,7 +179,7 @@ fn eval_step(
     client_to_hist_map: &HashMap<u32, Vec<FreqClickTrace>>,
     client_to_sample_idx_map: &HashMap<u32, Vec<usize>>,
 ) -> (u32, u32, bool, bool) {
-    let metric = metrics::DistanceMetric::from_str(&config.metric).unwrap();
+    let metric = frequency::metrics::DistanceMetric::from_str(&config.metric).unwrap();
     let target_hist = client_to_hist_map
         .get(client_target)
         .unwrap()
@@ -195,7 +198,7 @@ fn eval_step(
         let (website_set, code_set, location_set, category_set) =
             utils::get_unique_sets(target_hist, &sampled_hists);
 
-        let vectorized_target = click_trace::vectorize_click_trace(
+        let vectorized_target = fcl::vectorize_click_trace(
             target_hist,
             &website_set,
             &code_set,
@@ -204,7 +207,7 @@ fn eval_step(
         );
 
         if config.typical {
-            let vect_typ_click_trace = click_trace::gen_typ_vectorized_click_trace(
+            let vect_typ_click_trace = fcl::gen_typ_vectorized_click_trace(
                 &sampled_hists,
                 &website_set,
                 &code_set,
@@ -220,7 +223,7 @@ fn eval_step(
             tuples.push((OrderedFloat(dist), client.clone()));
         } else {
             for sample_hist in sampled_hists.into_iter() {
-                let vectorized_ref = click_trace::vectorize_click_trace(
+                let vectorized_ref = fcl::vectorize_click_trace(
                     &sample_hist,
                     &website_set,
                     &code_set,
@@ -249,8 +252,8 @@ fn eval_step(
 fn compute_dist(
     fields: &Vec<DataFields>,
     metric: &DistanceMetric,
-    target_click_trace: &VectFreqClickTrace,
-    ref_click_trace: &VectFreqClickTrace,
+    target_click_trace: &fcl::VectFreqClickTrace,
+    ref_click_trace: &fcl::VectFreqClickTrace,
 ) -> f64 {
     // Vector to store distance scores for each data field to be considered
     let mut total_dist = Vec::<f64>::with_capacity(fields.len());
@@ -282,15 +285,15 @@ fn compute_dist(
         };
 
         let dist = match metric {
-            DistanceMetric::Euclidean => metrics::euclidean_dist(target_vector, ref_vector),
-            DistanceMetric::Manhatten => metrics::manhatten_dist(target_vector, ref_vector),
-            DistanceMetric::Cosine => metrics::consine_dist(target_vector, ref_vector),
-            DistanceMetric::Jaccard => metrics::jaccard_dist(target_vector, ref_vector),
-            DistanceMetric::Bhattacharyya => metrics::bhattacharyya_dist(target_vector, ref_vector),
-            DistanceMetric::KullbrackLeibler => metrics::kl_dist(target_vector, ref_vector),
-            DistanceMetric::TotalVariation => metrics::total_var_dist(target_vector, ref_vector),
-            DistanceMetric::JeffriesMatusita => metrics::jeffries_dist(target_vector, ref_vector),
-            DistanceMetric::ChiSquared => metrics::chi_squared_dist(target_vector, ref_vector),
+            DistanceMetric::Euclidean => frequency::metrics::euclidean_dist(target_vector, ref_vector),
+            DistanceMetric::Manhatten => frequency::metrics::manhatten_dist(target_vector, ref_vector),
+            DistanceMetric::Cosine => frequency::metrics::consine_dist(target_vector, ref_vector),
+            DistanceMetric::Jaccard => frequency::metrics::jaccard_dist(target_vector, ref_vector),
+            DistanceMetric::Bhattacharyya => frequency::metrics::bhattacharyya_dist(target_vector, ref_vector),
+            DistanceMetric::KullbrackLeibler => frequency::metrics::kl_dist(target_vector, ref_vector),
+            DistanceMetric::TotalVariation => frequency::metrics::total_var_dist(target_vector, ref_vector),
+            DistanceMetric::JeffriesMatusita => frequency::metrics::jeffries_dist(target_vector, ref_vector),
+            DistanceMetric::ChiSquared => frequency::metrics::chi_squared_dist(target_vector, ref_vector),
         };
         total_dist.push(dist);
     }

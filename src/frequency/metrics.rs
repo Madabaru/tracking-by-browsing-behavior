@@ -1,4 +1,4 @@
-use crate::maths;
+use crate::frequency::maths;
 
 use nalgebra::EuclideanNorm;
 use nalgebra::LpNorm;

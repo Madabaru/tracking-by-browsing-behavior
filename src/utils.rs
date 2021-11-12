@@ -1,11 +1,12 @@
+#[path = "frequency/freq_click_trace.rs"] mod freq_click_trace;
+use crate::FreqClickTrace;
+
 use std::collections::HashMap;
 use std::iter::FromIterator;
 
 use indexmap::set::IndexSet;
-
 use ordered_float::OrderedFloat;
 
-use crate::click_trace::FreqClickTrace;
 
 pub fn gen_vector_from_freq_map(
     type_to_freq_map: &HashMap<String, u32>,
