@@ -6,7 +6,20 @@ use crate::maths;
 use crate::utils;
 
 #[derive(Debug, Clone)]
-pub struct ClickTrace {
+pub struct SeqClickTrace {
+    pub website: Vec<u32>,
+    pub code: Vec<u32>,
+    pub location: String,
+    pub category: Vec<u32>,
+    pub hour: Vec<u32>,
+    pub day: u32,
+    pub start_time: f64,
+    pub end_time: f64,
+    pub click_rate: f64,
+}
+
+#[derive(Debug, Clone)]
+pub struct FreqClickTrace {
     pub website: HashMap<String, u32>,
     pub code: HashMap<String, u32>,
     pub location: String,
@@ -19,7 +32,7 @@ pub struct ClickTrace {
 }
 
 #[derive(Debug, Clone)]
-pub struct VectClickTrace {
+pub struct VectFreqClickTrace {
     pub website: Vec<u32>,
     pub code: Vec<u32>,
     pub location: Vec<u32>,
@@ -29,12 +42,12 @@ pub struct VectClickTrace {
 }
 
 pub fn gen_typ_vectorized_click_trace(
-    click_traces: &Vec<ClickTrace>,
+    click_traces: &Vec<FreqClickTrace>,
     website_set: &IndexSet<String>,
     code_set: &IndexSet<String>,
     location_set: &IndexSet<String>,
     category_set: &IndexSet<String>,
-) -> VectClickTrace {
+) -> VectFreqClickTrace {
     
     let mut website_vec = maths::zeros_u32(website_set.len());
     let mut code_vec = maths::zeros_u32(code_set.len());
@@ -72,7 +85,7 @@ pub fn gen_typ_vectorized_click_trace(
     let day_len = category_vec.len() as u32;
     day_vec.iter_mut().for_each(|a| *a /= day_len);
 
-    let typ_vectorized_click_trace = VectClickTrace {
+    let typ_vectorized_click_trace = VectFreqClickTrace {
         website: website_vec,
         code: code_vec,
         location: location_vec,
@@ -85,13 +98,13 @@ pub fn gen_typ_vectorized_click_trace(
 
 // Transform each histogram (as a hashmap) in a click trace into a vector to speed up further computations
 pub fn vectorize_click_trace(
-    click_trace: &ClickTrace,
+    click_trace: &FreqClickTrace,
     website_set: &IndexSet<String>,
     code_set: &IndexSet<String>,
     location_set: &IndexSet<String>,
     category_set: &IndexSet<String>,
-) -> VectClickTrace {
-    let vectorized_click_trace = VectClickTrace {
+) -> VectFreqClickTrace {
+    let vectorized_click_trace = VectFreqClickTrace {
         website: utils::gen_vector_from_freq_map(&click_trace.website, website_set),
         code: utils::gen_vector_from_freq_map(&click_trace.code, code_set),
         location: utils::gen_vector_from_str(&click_trace.location, location_set),

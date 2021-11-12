@@ -5,7 +5,7 @@ use indexmap::set::IndexSet;
 
 use ordered_float::OrderedFloat;
 
-use crate::click_trace::ClickTrace;
+use crate::click_trace::FreqClickTrace;
 
 pub fn gen_vector_from_freq_map(
     type_to_freq_map: &HashMap<String, u32>,
@@ -30,8 +30,8 @@ pub fn is_target_in_top_k(client_target: &u32, tuples: &[(OrderedFloat<f64>, u32
 
 
 pub fn get_unique_sets(
-    target_hist: &ClickTrace,
-    sampled_hists: &Vec<ClickTrace>,
+    target_hist: &FreqClickTrace,
+    sampled_hists: &Vec<FreqClickTrace>,
 ) -> (
     IndexSet<String>,
     IndexSet<String>,

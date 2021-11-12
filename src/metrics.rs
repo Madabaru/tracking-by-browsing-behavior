@@ -28,7 +28,7 @@ impl FromStr for DistanceMetric {
             "manhatten" => Ok(DistanceMetric::Manhatten),
             "cosine" => Ok(DistanceMetric::Cosine),
             "jaccard" => Ok(DistanceMetric::Jaccard),
-            "bhattacharyya" => Ok(DistanceMetric::Bhattacharyya),
+            "J" => Ok(DistanceMetric::Bhattacharyya),
             "kullbrack_leibler" => Ok(DistanceMetric::KullbrackLeibler),
             "total_variation" => Ok(DistanceMetric::TotalVariation),
             "jeffries_matusita" => Ok(DistanceMetric::JeffriesMatusita),

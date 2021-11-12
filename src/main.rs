@@ -19,7 +19,7 @@ use rand::{seq::IteratorRandom, Rng};
 
 use ordered_float::OrderedFloat;
 use parse::DataFields;
-use click_trace::{ClickTrace, VectClickTrace};
+use click_trace::{FreqClickTrace, VectFreqClickTrace, SeqClickTrace};
 use metrics::DistanceMetric;
 
 fn main() {
@@ -29,40 +29,44 @@ fn main() {
     // Set random seed for reproducability
     let mut rng = StdRng::seed_from_u64(config.seed);
 
-    let client_to_hist_map: HashMap<u32, Vec<ClickTrace>> = parse::parse_to_hist(&config).unwrap();
 
-    let client_to_target_idx_map: HashMap<u32, usize> =
-        gen_test_data(&client_to_hist_map, &mut rng, config.client_sample_size);
+    let client_to_seq_map: HashMap<u32, Vec<SeqClickTrace>> = parse::parse_to_sequence(&config).unwrap();
+    let client_to_hist_map: HashMap<u32, Vec<FreqClickTrace>> = parse::parse_to_hist(&config).unwrap();
 
-    if !config.typical {
-        let client_to_sample_idx_map: HashMap<u32, Vec<usize>> = get_train_data(
-            &client_to_hist_map,
-            &mut rng,
-            config.click_trace_sample_size,
-        );
+    
 
-        eval(
-            &config,
-            &client_to_hist_map,
-            &client_to_target_idx_map,
-            &client_to_sample_idx_map,
-        );
-    } else {
-        let client_to_sample_idx_map: HashMap<u32, Vec<usize>> =
-            get_train_data(&client_to_hist_map, &mut rng, 0);
+    // let client_to_target_idx_map: HashMap<u32, usize> =
+    //     gen_test_data(&client_to_hist_map, &mut rng, config.client_sample_size);
 
-        eval(
-            &config,
-            &client_to_hist_map,
-            &client_to_target_idx_map,
-            &client_to_sample_idx_map,
-        );
-    }
+    // if !config.typical {
+    //     let client_to_sample_idx_map: HashMap<u32, Vec<usize>> = get_train_data(
+    //         &client_to_hist_map,
+    //         &mut rng,
+    //         config.click_trace_sample_size,
+    //     );
+
+    //     eval(
+    //         &config,
+    //         &client_to_hist_map,
+    //         &client_to_target_idx_map,
+    //         &client_to_sample_idx_map,
+    //     );
+    // } else {
+    //     let client_to_sample_idx_map: HashMap<u32, Vec<usize>> =
+    //         get_train_data(&client_to_hist_map, &mut rng, 0);
+
+    //     eval(
+    //         &config,
+    //         &client_to_hist_map,
+    //         &client_to_target_idx_map,
+    //         &client_to_sample_idx_map,
+    //     );
+    // }
 }
 
 // Sample a subset of clients and a target click trace that the evaluation is based upon
 fn gen_test_data<R: Rng>(
-    client_to_hist_map: &HashMap<u32, Vec<ClickTrace>>,
+    client_to_hist_map: &HashMap<u32, Vec<FreqClickTrace>>,
     rng: &mut R,
     client_sample_size: usize,
 ) -> HashMap<u32, usize> {
@@ -83,7 +87,7 @@ fn gen_test_data<R: Rng>(
 
 // Sample click traces for each client and store sample indices in map
 fn get_train_data<R: Rng>(
-    client_to_hist_map: &HashMap<u32, Vec<ClickTrace>>,
+    client_to_hist_map: &HashMap<u32, Vec<FreqClickTrace>>,
     rng: &mut R,
     click_trace_sample_size: usize,
 ) -> HashMap<u32, Vec<usize>> {
@@ -107,7 +111,7 @@ fn get_train_data<R: Rng>(
 
 fn eval(
     config: &cli::Config,
-    client_to_hist_map: &HashMap<u32, Vec<ClickTrace>>,
+    client_to_hist_map: &HashMap<u32, Vec<FreqClickTrace>>,
     client_to_target_idx_map: &HashMap<u32, usize>,
     client_to_sample_idx_map: &HashMap<u32, Vec<usize>>,
 ) {
@@ -169,7 +173,7 @@ fn eval_step(
     config: &cli::Config,
     client_target: &u32,
     target_idx: &usize,
-    client_to_hist_map: &HashMap<u32, Vec<ClickTrace>>,
+    client_to_hist_map: &HashMap<u32, Vec<FreqClickTrace>>,
     client_to_sample_idx_map: &HashMap<u32, Vec<usize>>,
 ) -> (u32, u32, bool, bool) {
     let metric = metrics::DistanceMetric::from_str(&config.metric).unwrap();
@@ -183,7 +187,7 @@ fn eval_step(
 
     for (client, click_traces) in client_to_hist_map.into_iter() {
         let samples_idx = client_to_sample_idx_map.get(client).unwrap();
-        let sampled_hists: Vec<ClickTrace> = samples_idx
+        let sampled_hists: Vec<FreqClickTrace> = samples_idx
             .into_iter()
             .map(|idx| click_traces.get(*idx).unwrap().clone())
             .collect();
@@ -245,8 +249,8 @@ fn eval_step(
 fn compute_dist(
     fields: &Vec<DataFields>,
     metric: &DistanceMetric,
-    target_click_trace: &VectClickTrace,
-    ref_click_trace: &VectClickTrace,
+    target_click_trace: &VectFreqClickTrace,
+    ref_click_trace: &VectFreqClickTrace,
 ) -> f64 {
     // Vector to store distance scores for each data field to be considered
     let mut total_dist = Vec::<f64>::with_capacity(fields.len());
