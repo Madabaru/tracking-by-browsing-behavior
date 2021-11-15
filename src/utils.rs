@@ -1,10 +1,11 @@
-use crate::frequency::click_trace::FreqClickTrace;
+use crate::{cli, frequency::click_trace::FreqClickTrace};
 
 use std::{collections::HashMap, iter::FromIterator};
 
 use indexmap::set::IndexSet;
-
 use ordered_float::OrderedFloat;
+
+use seal::pair::{Alignment, AlignmentSet, InMemoryAlignmentMatrix, NeedlemanWunsch, SmithWaterman, Step, strategy};
 
 pub fn gen_vector_from_freq_map(
     type_to_freq_map: &HashMap<String, u32>,
@@ -54,4 +55,18 @@ pub fn get_unique_sets(
     let category_set: IndexSet<String> = IndexSet::from_iter(category_vec);
 
     (website_set, code_set, location_set, category_set)
+}
+
+
+pub fn get_strategy<T: seal::pair::Strategy>(config: &cli::Config) -> T{
+
+    let scoring_matrix = config.scoring_matrix;
+    let strategy: T;
+
+    if config.strategy == "NW" {
+        let strategy = NeedlemanWunsch::new(scoring_matrix[0], scoring_matrix[1], scoring_matrix[2], scoring_matrix[3]);
+    } else {
+        let strategy = SmithWaterman::new(scoring_matrix[0], scoring_matrix[1], scoring_matrix[2], scoring_matrix[3]);
+    }
+    strategy
 }

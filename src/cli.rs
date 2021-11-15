@@ -1,4 +1,4 @@
-use crate::parse::DataFields;
+use crate::{frequency, parse::DataFields};
 
 use std::str::FromStr;
 
@@ -17,12 +17,45 @@ pub struct Config {
     pub path: String,
     pub seed: u64,
     pub typical: bool,
+    pub strategy: String, 
+    pub scoring_matrix: Vec<isize>, 
+    pub approach: String,
+    pub scope: String,
 }
 
-pub fn get_cli_config() -> Result<Config, core::fmt::Error> {
+
+pub fn get_cli_config() -> Result<Config, clap::Error> {
     let matches = clap::App::new("Tracking-Users-by-Browsing-Behavior")
         .version("1.0")
         .author("Felix John")
+        .arg(
+            clap::Arg::new("approach")
+                .long("approach")
+                .about("Sequence alignment-based or frequency-based approach.")
+                .possible_values(&["sequence", "frequency"])
+                .default_value("sequence"),
+        )
+        .arg(
+            clap::Arg::new("scoring_matrix")
+                .long("scoring_matrix")
+                .about("The scoring matrix to use for the alignment approach.")
+                .multiple_values(true)
+                .default_values(&["1", "-1", "-1", "-1"])
+        )
+        .arg(
+            clap::Arg::new("scope")
+                .long("scope")
+                .about("The scope of the alignment algorithm: local or global.")
+                .possible_values(&["local", "global"])
+                .default_value("local"),
+        )
+        .arg(
+            clap::Arg::new("strategy")
+                .long("strategy")
+                .about("The alignment strategy to use.")
+                .possible_values(&["SW", "NW"])
+                .default_value("NW"),
+        )
         .arg(
             clap::Arg::new("delay_limit")
                 .long("delay_limit")
@@ -171,6 +204,24 @@ pub fn get_cli_config() -> Result<Config, core::fmt::Error> {
             .unwrap_or_default()
             .parse::<bool>()
             .unwrap(),
+        strategy: matches 
+            .value_of("strategy")
+            .map(String::from)
+            .unwrap_or_default(),
+        scoring_matrix: matches
+            .values_of_lossy("scoring_matrix")
+            .unwrap_or_default()
+            .iter()
+            .map(|x| isize::from_str(x).unwrap())
+            .collect(),
+        approach: matches
+            .value_of("approach")
+            .map(String::from)
+            .unwrap_or_default(),
+        scope: matches
+            .value_of("scope")
+            .map(String::from)
+            .unwrap_or_default(),
     };
     Ok(config)
 }
