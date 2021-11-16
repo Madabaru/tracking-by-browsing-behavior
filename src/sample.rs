@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-
 use rand::{seq::IteratorRandom, Rng};
 
 // Sample a subset of clients and a target click trace that the evaluation is based upon

@@ -1,10 +1,14 @@
 use crate::cli::Config;
 use crate::frequency::click_trace::FreqClickTrace;
 
-use std::{collections::HashMap, iter::FromIterator};
-
-use std::io::{prelude::*, BufWriter};
-
+use std::{
+    collections::HashMap, 
+    iter::FromIterator
+};
+use std::io::{
+    prelude::*, 
+    BufWriter
+};
 use indexmap::set::IndexSet;
 use ordered_float::OrderedFloat;
 

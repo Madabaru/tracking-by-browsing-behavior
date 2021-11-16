@@ -1,7 +1,6 @@
 use crate::cli;
 use crate::parse::DataFields;
 use crate::utils;
-
 use crate::frequency::{
     click_trace,
     click_trace::{FreqClickTrace, VectFreqClickTrace},
@@ -13,9 +12,7 @@ use std::{
     collections::HashMap,
     str::FromStr,
 };
-
 use rayon::prelude::*;
-
 use ordered_float::OrderedFloat;
 
 pub fn eval(

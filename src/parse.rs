@@ -1,7 +1,8 @@
 use crate::cli::Config;
-
-use crate::frequency::{click_trace::FreqClickTrace, maths};
-
+use crate::frequency::{
+    click_trace::FreqClickTrace, 
+    maths
+};
 use crate::sequence::click_trace::SeqClickTrace;
 
 use std::{
@@ -12,11 +13,8 @@ use std::{
     string::ParseError,
     time::{Duration, UNIX_EPOCH},
 };
-
 use chrono::{prelude::DateTime, Datelike, Timelike, Utc};
-
 use indexmap::IndexSet;
-
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
