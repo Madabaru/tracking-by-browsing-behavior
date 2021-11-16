@@ -11,7 +11,6 @@ use crate::frequency::{
 
 use std::{
     collections::HashMap,
-    io::{prelude::*, BufWriter},
     str::FromStr,
 };
 
@@ -54,29 +53,16 @@ pub fn eval(
     }
 
     let accuracy: f64 = correct_pred as f64 / result_list.len() as f64;
-    println!("Rank 1: {:?}", accuracy);
+    log::info!("Rank 1: {:?}", accuracy);
     let top_10: f64 = top_10_count as f64 / result_list.len() as f64;
-    println!("Top 10: {:?}", top_10);
+    log::info!("Top 10: {:?}", top_10);
     let top_10_percent: f64 = top_10_percent_count as f64 / result_list.len() as f64;
-    println!("Top 10 Percent: {:?}", top_10_percent);
+    log::info!("Top 10 Percent: {:?}", top_10_percent);
 
-    let file = std::fs::File::create("tmp/output").unwrap();
-    let mut writer = BufWriter::new(&file);
-    for i in result_list {
-        write!(writer, "{},{} \n", i.0, i.1).expect("Unable to write to output file.");
-    }
-
-    let mut file = std::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open("tmp/evaluation")
-        .unwrap();
-    write!(
-        file,
-        "--------------\nExperiment: {:?}\nTop 10: {}\nTop 10 Percent: {}\n",
-        config, top_10, top_10_percent
-    )
-    .expect("Unable to write to evaluation file.")
+    // Write result to output file for further processing in python
+    utils::write_to_output_file(result_list);
+    // Write metrics to final evaluation file 
+    utils::write_to_eval_file(config, top_10, top_10_percent);
 }
 
 fn eval_step(

@@ -3,14 +3,13 @@ use crate::parse::DataFields;
 use crate::sequence::click_trace::SeqClickTrace;
 use crate::utils;
 
-use std::{cmp::Reverse, collections::HashMap, io::{prelude::*, BufWriter}};
-
+use std::{
+    cmp::Reverse,
+    collections::HashMap
+};
 use seal::pair::{AlignmentSet, InMemoryAlignmentMatrix, NeedlemanWunsch, SmithWaterman};
-
 use rayon::prelude::*;
-
 use ordered_float::OrderedFloat;
-
 
 pub fn eval(
     config: &cli::Config,
@@ -47,29 +46,17 @@ pub fn eval(
     }
 
     let accuracy: f64 = correct_pred as f64 / result_list.len() as f64;
-    println!("Rank 1: {:?}", accuracy);
+    log::info!("Rank 1: {:?}", accuracy);
     let top_10: f64 = top_10_count as f64 / result_list.len() as f64;
-    println!("Top 10: {:?}", top_10);
+    log::info!("Top 10: {:?}", top_10);
     let top_10_percent: f64 = top_10_percent_count as f64 / result_list.len() as f64;
-    println!("Top 10 Percent: {:?}", top_10_percent);
+    log::info!("Top 10 Percent: {:?}", top_10_percent);
 
-    let file = std::fs::File::create("tmp/output").unwrap();
-    let mut writer = BufWriter::new(&file);
-    for i in result_list {
-        write!(writer, "{},{} \n", i.0, i.1).expect("Unable to write to output file.");
-    }
+    // Write result to output file for further processing in python
 
-    let mut file = std::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open("tmp/evaluation")
-        .unwrap();
-    write!(
-        file,
-        "--------------\nExperiment: {:?}\nTop 10: {}\nTop 10 Percent: {}\n",
-        config, top_10, top_10_percent
-    )
-    .expect("Unable to write to evaluation file.")
+    utils::write_to_output_file(result_list);
+    // Write metrics to final evaluation file 
+    utils::write_to_eval_file(config, top_10, top_10_percent);
 }
 
 fn eval_step(
@@ -120,8 +107,8 @@ fn eval_step(
 
 fn compute_alignment_scores(
     fields: &Vec<DataFields>,
-    strategy: &str, 
-    scope: &str, 
+    strategy: &str,
+    scope: &str,
     scoring_matrix: &[isize],
     target_click_trace: &SeqClickTrace,
     ref_click_trace: &SeqClickTrace,
@@ -174,24 +161,45 @@ fn compute_alignment_scores(
     avg_score
 }
 
-fn compute_sequence_alignment(strategy: &str, scope: &str, scoring_matrix: &[isize], target: Vec<u32>, reference: Vec<u32>) -> f64 {
+fn compute_sequence_alignment(
+    strategy: &str,
+    scope: &str,
+    scoring_matrix: &[isize],
+    target: Vec<u32>,
+    reference: Vec<u32>,
+) -> f64 {
     let set: AlignmentSet<InMemoryAlignmentMatrix> = match strategy {
-        "NW" => {
-            let strategy = NeedlemanWunsch::new(scoring_matrix[0], scoring_matrix[1], scoring_matrix[2], scoring_matrix[3]);
+        "nw" => {
+            let strategy = NeedlemanWunsch::new(
+                scoring_matrix[0],
+                scoring_matrix[1],
+                scoring_matrix[2],
+                scoring_matrix[3],
+            );
             AlignmentSet::new(target.len(), reference.len(), strategy, |x, y| {
-                    target[x] == reference[y]}).unwrap()
-        },
-        "SW" => {
-            let strategy = SmithWaterman::new(scoring_matrix[0], scoring_matrix[1], scoring_matrix[2], scoring_matrix[3]);
-            AlignmentSet::new(target.len(), reference.len(), strategy, |x, y| { target[x] == reference[y]}).unwrap()
-        },
-        _ => panic!("error: unknown strategy name supplied: {}", strategy)
+                target[x] == reference[y]
+            })
+            .unwrap()
+        }
+        "sw" => {
+            let strategy = SmithWaterman::new(
+                scoring_matrix[0],
+                scoring_matrix[1],
+                scoring_matrix[2],
+                scoring_matrix[3],
+            );
+            AlignmentSet::new(target.len(), reference.len(), strategy, |x, y| {
+                target[x] == reference[y]
+            })
+            .unwrap()
+        }
+        _ => panic!("Error: unknown strategy name supplied: {}", strategy),
     };
 
     let score = match scope {
         "global" => set.global_score() as f64,
         "local" => set.local_score() as f64,
-        _ => panic!("error: unknown scope name supplied: {}", scope)
+        _ => panic!("Error: unknown scope name supplied: {}", scope),
     };
     score
 }

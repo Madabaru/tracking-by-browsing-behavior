@@ -49,7 +49,7 @@ impl FromStr for DataFields {
             "category" => Ok(Self::Category),
             "day" => Ok(Self::Day),
             "hour" => Ok(Self::Hour),
-            x => panic!("wrong data field supplied: {:?}", x),
+            x => panic!("Error: Wrong data field supplied: {:?}", x),
         }
     }
 }

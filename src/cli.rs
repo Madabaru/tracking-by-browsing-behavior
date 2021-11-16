@@ -1,4 +1,4 @@
-use crate::{frequency, parse::DataFields};
+use crate::{parse::DataFields};
 
 use std::str::FromStr;
 
@@ -22,6 +22,7 @@ pub struct Config {
     pub approach: String,
     pub scope: String,
 }
+
 
 pub fn get_cli_config() -> Result<Config, clap::Error> {
     let matches = clap::App::new("Tracking-Users-by-Browsing-Behavior")
@@ -52,8 +53,8 @@ pub fn get_cli_config() -> Result<Config, clap::Error> {
             clap::Arg::new("strategy")
                 .long("strategy")
                 .about("The alignment strategy to use.")
-                .possible_values(&["SW", "NW"])
-                .default_value("NW"),
+                .possible_values(&["sw", "nw"])
+                .default_value("nw"),
         )
         .arg(
             clap::Arg::new("delay_limit")

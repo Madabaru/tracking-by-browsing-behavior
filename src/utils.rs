@@ -1,11 +1,15 @@
-use crate::{cli, frequency::click_trace::FreqClickTrace};
+use crate::cli::Config;
+use crate::frequency::click_trace::FreqClickTrace;
 
 use std::{collections::HashMap, iter::FromIterator};
+
+use std::io::{prelude::*, BufWriter};
 
 use indexmap::set::IndexSet;
 use ordered_float::OrderedFloat;
 
-use seal::pair::{Alignment, AlignmentSet, InMemoryAlignmentMatrix, NeedlemanWunsch, SmithWaterman, Step, strategy};
+const OUTPUT_PATH: &str = "tmp/output";
+const EVAL_PATH: &str = "tmp/evaluation";
 
 pub fn gen_vector_from_freq_map(
     type_to_freq_map: &HashMap<String, u32>,
@@ -57,16 +61,24 @@ pub fn get_unique_sets(
     (website_set, code_set, location_set, category_set)
 }
 
+pub fn write_to_output_file(result_list: Vec<(u32, u32, bool, bool)>) {
+    let file = std::fs::File::create(OUTPUT_PATH).unwrap();
+    let mut writer = BufWriter::new(&file);
+    for i in result_list {
+        write!(writer, "{},{} \n", i.0, i.1).expect("Unable to write to output file.");
+    }
+}
 
-// pub fn get_strategy<T: seal::pair::Strategy>(config: &cli::Config) -> T{
-
-//     let scoring_matrix = config.scoring_matrix.clone();
-//     let strategy: T;
-
-//     if config.strategy == "NW" {
-//         strategy = NeedlemanWunsch::new(scoring_matrix[0], scoring_matrix[1], scoring_matrix[2], scoring_matrix[3]);
-//     } else {
-//         strategy = SmithWaterman::new(scoring_matrix[0], scoring_matrix[1], scoring_matrix[2], scoring_matrix[3]);
-//     }
-//     strategy
-// }
+pub fn write_to_eval_file(config: &Config, top_10: f64, top_10_percent: f64) {
+    let mut file = std::fs::OpenOptions::new()
+    .create(true)
+    .append(true)
+    .open(EVAL_PATH)
+    .unwrap();
+    write!(
+        file,
+        "--------------\nExperiment: {:?}\nTop 10: {}\nTop 10 Percent: {}\n",
+        config, top_10, top_10_percent
+    )
+    .expect("Unable to write to evaluation file.");
+}
