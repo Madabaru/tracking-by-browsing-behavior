@@ -63,7 +63,7 @@ pub fn parse_to_frequency(
     let mut click_trace_len: usize = 0;
     let mut client_id: u32 = 0;
 
-    let mut client_to_hist_map: HashMap<u32, Vec<FreqClickTrace>> = HashMap::new();
+    let mut client_to_freq_map: HashMap<u32, Vec<FreqClickTrace>> = HashMap::new();
     let mut reader = csv::Reader::from_path(&config.path)?;
 
     for result in reader.deserialize() {
@@ -73,11 +73,11 @@ pub fn parse_to_frequency(
             client_id += 1;
         }
 
-        if !client_to_hist_map.contains_key(&client_id) {
-            client_to_hist_map.insert(client_id, Vec::with_capacity(10));
+        if !client_to_freq_map.contains_key(&client_id) {
+            client_to_freq_map.insert(client_id, Vec::with_capacity(10));
         }
 
-        let click_traces_list = client_to_hist_map.get_mut(&client_id).unwrap();
+        let click_traces_list = client_to_freq_map.get_mut(&client_id).unwrap();
 
         if click_traces_list.is_empty()
             || click_trace_len >= config.max_click_trace_len
@@ -148,10 +148,10 @@ pub fn parse_to_frequency(
     }
 
     // Remove any client with less than the minimum number of click traces
-    println!("{:?}", client_to_hist_map.keys().len());
-    client_to_hist_map.retain(|_, value| value.len() >= config.min_num_click_traces);
-    println!("{:?}", client_to_hist_map.keys().len());
-    Ok(client_to_hist_map)
+    log::info!("Numer of clients before filtering: {:?}", client_to_freq_map.keys().len());
+    client_to_freq_map.retain(|_, value| value.len() >= config.min_num_click_traces);
+    log::info!("Number of clients after filtering: {:?}", client_to_freq_map.keys().len());
+    Ok(client_to_freq_map)
 }
 
 pub fn parse_to_sequence(
@@ -249,8 +249,8 @@ pub fn parse_to_sequence(
     }
 
     // Remove any client with less than the minimum number of click traces
-    println!("{:?}", client_to_seq_map.keys().len());
+    log::info!("Number of clients before filtering: {:?}", client_to_seq_map.keys().len());
     client_to_seq_map.retain(|_, value| value.len() >= config.min_num_click_traces);
-    println!("{:?}", client_to_seq_map.keys().len());
+    log::info!("Number of clients after filtering: {:?}", client_to_seq_map.keys().len());
     Ok(client_to_seq_map)
 }

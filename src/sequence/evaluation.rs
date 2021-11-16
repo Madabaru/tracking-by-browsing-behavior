@@ -205,7 +205,7 @@ fn compute_sequence_alignment(
 }
 
 fn compute_similarity_score<T: std::cmp::PartialEq>(target: T, reference: T) -> f64 {
-    let mut score = 0.0;
+    let score;
     if target == reference {
         score = 1.0;
     } else {
