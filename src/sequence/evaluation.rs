@@ -1,18 +1,16 @@
 use crate::cli;
 use crate::parse::DataFields;
-use crate::utils;
 use crate::sequence::click_trace::SeqClickTrace;
+use crate::utils;
 
-use std::{
-    collections::HashMap,
-    io::{prelude::*, BufWriter},
-};
+use std::{cmp::Reverse, collections::HashMap, io::{prelude::*, BufWriter}};
 
-use seal::pair::{AlignmentSet, InMemoryAlignmentMatrix};
+use seal::pair::{AlignmentSet, InMemoryAlignmentMatrix, NeedlemanWunsch, SmithWaterman};
 
 use rayon::prelude::*;
 
 use ordered_float::OrderedFloat;
+
 
 pub fn eval(
     config: &cli::Config,
@@ -23,7 +21,7 @@ pub fn eval(
     let result_list: Vec<(u32, u32, bool, bool)> = client_to_target_idx_map
         .par_iter()
         .map(|(client, target_idx)| {
-            eval_step::<dyn seal::pair::Strategy>(
+            eval_step(
                 config,
                 client,
                 target_idx,
@@ -74,21 +72,19 @@ pub fn eval(
     .expect("Unable to write to evaluation file.")
 }
 
-fn eval_step<T: seal::pair::Strategy>(
+fn eval_step(
     config: &cli::Config,
     client_target: &u32,
     target_idx: &usize,
     client_to_hist_map: &HashMap<u32, Vec<SeqClickTrace>>,
     client_to_sample_idx_map: &HashMap<u32, Vec<usize>>,
 ) -> (u32, u32, bool, bool) {
-    
     let target_click_trace = client_to_hist_map
         .get(client_target)
         .unwrap()
         .get(*target_idx)
         .unwrap();
 
-    let strategy: T = utils::get_strategy(config);
     let mut tuples: Vec<(OrderedFloat<f64>, u32)> = Vec::with_capacity(client_to_hist_map.len());
 
     for (client, click_traces) in client_to_hist_map.into_iter() {
@@ -99,11 +95,18 @@ fn eval_step<T: seal::pair::Strategy>(
             .collect();
 
         for sample_click_trace in sampled_click_trace.into_iter() {
-            let score = compute_alignment_scores(&config.fields, &target_click_trace, &sample_click_trace, strategy, &config.scope);
+            let score = compute_alignment_scores(
+                &config.fields,
+                &config.strategy,
+                &config.scope,
+                &config.scoring_matrix,
+                &target_click_trace,
+                &sample_click_trace,
+            );
             tuples.push((OrderedFloat(score), client.clone()));
         }
     }
-    tuples.sort_unstable_by_key(|k| k.0);
+    tuples.sort_unstable_by_key(|k| Reverse(k.0));
     let cutoff: usize = (0.1 * client_to_hist_map.len() as f64) as usize;
     let is_top_10_percent = utils::is_target_in_top_k(client_target, &tuples[..cutoff]);
     let is_top_10: bool = utils::is_target_in_top_k(client_target, &tuples[..1]);
@@ -115,19 +118,54 @@ fn eval_step<T: seal::pair::Strategy>(
     )
 }
 
-
-fn compute_alignment_scores<T: seal::pair::Strategy>(fields: &Vec<DataFields>, target_click_trace: &SeqClickTrace, ref_click_trace: &SeqClickTrace, strategy: T, scope: &str) -> f64 {
-
+fn compute_alignment_scores(
+    fields: &Vec<DataFields>,
+    strategy: &str, 
+    scope: &str, 
+    scoring_matrix: &[isize],
+    target_click_trace: &SeqClickTrace,
+    ref_click_trace: &SeqClickTrace,
+) -> f64 {
     let mut total_align_score = Vec::<f64>::with_capacity(fields.len());
 
     for field in fields.into_iter() {
         let score = match field {
-            DataFields::Website => compute_sequence_alignment(strategy, scope, target_click_trace.website.clone(), ref_click_trace.website.clone()),
-            DataFields::Category => compute_sequence_alignment(strategy, scope, target_click_trace.category.clone(), ref_click_trace.category.clone()),
-            DataFields::Code => compute_sequence_alignment(strategy, scope, target_click_trace.code.clone(), ref_click_trace.code.clone()),
-            DataFields::Location => compute_similarity_score(target_click_trace.location.clone(), ref_click_trace.location.clone()),
-            DataFields::Day => compute_similarity_score(target_click_trace.day.clone(), ref_click_trace.day.clone()),
-            DataFields::Hour => compute_sequence_alignment(strategy, scope, target_click_trace.hour.clone(), ref_click_trace.hour.clone()),
+            DataFields::Website => compute_sequence_alignment(
+                strategy,
+                scope,
+                scoring_matrix,
+                target_click_trace.website.clone(),
+                ref_click_trace.website.clone(),
+            ),
+            DataFields::Category => compute_sequence_alignment(
+                strategy,
+                scope,
+                scoring_matrix,
+                target_click_trace.website.clone(),
+                ref_click_trace.website.clone(),
+            ),
+            DataFields::Code => compute_sequence_alignment(
+                strategy,
+                scope,
+                scoring_matrix,
+                target_click_trace.website.clone(),
+                ref_click_trace.website.clone(),
+            ),
+            DataFields::Location => compute_similarity_score(
+                target_click_trace.location.clone(),
+                ref_click_trace.location.clone(),
+            ),
+            DataFields::Day => compute_similarity_score(
+                target_click_trace.day.clone(),
+                ref_click_trace.day.clone(),
+            ),
+            DataFields::Hour => compute_sequence_alignment(
+                strategy,
+                scope,
+                scoring_matrix,
+                target_click_trace.website.clone(),
+                ref_click_trace.website.clone(),
+            ),
         };
         total_align_score.push(score)
     }
@@ -136,27 +174,34 @@ fn compute_alignment_scores<T: seal::pair::Strategy>(fields: &Vec<DataFields>, t
     avg_score
 }
 
-fn compute_sequence_alignment<T: seal::pair::Strategy>(strategy: T, scope: &str, target: Vec<u32> , reference: Vec<u32>) -> f64{
+fn compute_sequence_alignment(strategy: &str, scope: &str, scoring_matrix: &[isize], target: Vec<u32>, reference: Vec<u32>) -> f64 {
+    let set: AlignmentSet<InMemoryAlignmentMatrix> = match strategy {
+        "NW" => {
+            let strategy = NeedlemanWunsch::new(scoring_matrix[0], scoring_matrix[1], scoring_matrix[2], scoring_matrix[3]);
+            AlignmentSet::new(target.len(), reference.len(), strategy, |x, y| {
+                    target[x] == reference[y]}).unwrap()
+        },
+        "SW" => {
+            let strategy = SmithWaterman::new(scoring_matrix[0], scoring_matrix[1], scoring_matrix[2], scoring_matrix[3]);
+            AlignmentSet::new(target.len(), reference.len(), strategy, |x, y| { target[x] == reference[y]}).unwrap()
+        },
+        _ => panic!("error: unknown strategy name supplied: {}", strategy)
+    };
 
-    let set: AlignmentSet<InMemoryAlignmentMatrix> = AlignmentSet::new(target.len(), reference.len(), strategy, |x, y| {
-        target[x] == reference[y]
-    })
-    .unwrap();
-
-    let score;
-    if scope == "global" {
-        score == set.global_score() as f64;
-    } else {
-        score == set.local_score() as f64;
-    }
+    let score = match scope {
+        "global" => set.global_score() as f64,
+        "local" => set.local_score() as f64,
+        _ => panic!("error: unknown scope name supplied: {}", scope)
+    };
     score
 }
 
 fn compute_similarity_score<T: std::cmp::PartialEq>(target: T, reference: T) -> f64 {
+    let mut score = 0.0;
     if target == reference {
-        return 1.0
+        score = 1.0;
     } else {
-        return 0.0
+        score = 0.0;
     }
+    score
 }
-

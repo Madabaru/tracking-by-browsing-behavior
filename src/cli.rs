@@ -17,12 +17,11 @@ pub struct Config {
     pub path: String,
     pub seed: u64,
     pub typical: bool,
-    pub strategy: String, 
-    pub scoring_matrix: Vec<isize>, 
+    pub strategy: String,
+    pub scoring_matrix: Vec<isize>,
     pub approach: String,
     pub scope: String,
 }
-
 
 pub fn get_cli_config() -> Result<Config, clap::Error> {
     let matches = clap::App::new("Tracking-Users-by-Browsing-Behavior")
@@ -38,7 +37,7 @@ pub fn get_cli_config() -> Result<Config, clap::Error> {
         .arg(
             clap::Arg::new("scoring_matrix")
                 .long("scoring_matrix")
-                .about("The scoring matrix to use for the alignment approach.")
+                .about("The scoring matrix to use for the alignment approach: ['equal', 'align', 'insert', 'delete'].")
                 .multiple_values(true)
                 .default_values(&["1", "-1", "-1", "-1"])
         )
@@ -204,7 +203,7 @@ pub fn get_cli_config() -> Result<Config, clap::Error> {
             .unwrap_or_default()
             .parse::<bool>()
             .unwrap(),
-        strategy: matches 
+        strategy: matches
             .value_of("strategy")
             .map(String::from)
             .unwrap_or_default(),

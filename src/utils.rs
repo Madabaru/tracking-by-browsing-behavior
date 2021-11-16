@@ -58,15 +58,15 @@ pub fn get_unique_sets(
 }
 
 
-pub fn get_strategy<T: seal::pair::Strategy>(config: &cli::Config) -> T{
+// pub fn get_strategy<T: seal::pair::Strategy>(config: &cli::Config) -> T{
 
-    let scoring_matrix = config.scoring_matrix;
-    let strategy: T;
+//     let scoring_matrix = config.scoring_matrix.clone();
+//     let strategy: T;
 
-    if config.strategy == "NW" {
-        let strategy = NeedlemanWunsch::new(scoring_matrix[0], scoring_matrix[1], scoring_matrix[2], scoring_matrix[3]);
-    } else {
-        let strategy = SmithWaterman::new(scoring_matrix[0], scoring_matrix[1], scoring_matrix[2], scoring_matrix[3]);
-    }
-    strategy
-}
+//     if config.strategy == "NW" {
+//         strategy = NeedlemanWunsch::new(scoring_matrix[0], scoring_matrix[1], scoring_matrix[2], scoring_matrix[3]);
+//     } else {
+//         strategy = SmithWaterman::new(scoring_matrix[0], scoring_matrix[1], scoring_matrix[2], scoring_matrix[3]);
+//     }
+//     strategy
+// }
