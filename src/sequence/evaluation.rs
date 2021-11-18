@@ -52,8 +52,7 @@ pub fn eval(
     let top_10_percent: f64 = top_10_percent_count as f64 / result_list.len() as f64;
     log::info!("Top 10 Percent: {:?}", top_10_percent);
 
-    // Write result to output file for further processing in python
-
+    // Write result to output file for further processing in python 
     utils::write_to_output_file(result_list);
     // Write metrics to final evaluation file 
     utils::write_to_eval_file(config, top_10, top_10_percent);
@@ -113,7 +112,9 @@ fn compute_alignment_scores(
     target_click_trace: &SeqClickTrace,
     ref_click_trace: &SeqClickTrace,
 ) -> f64 {
-    let mut total_align_score = Vec::<f64>::with_capacity(fields.len());
+
+    let mut align_scores = Vec::<f64>::with_capacity(fields.len());
+    let mut unnormalized_align_scores = Vec::<f64>::with_capacity(fields.len());
 
     for field in fields.into_iter() {
         let score = match field {
@@ -154,10 +155,23 @@ fn compute_alignment_scores(
                 ref_click_trace.website.clone(),
             ),
         };
-        total_align_score.push(score)
+
+        match field {
+            DataFields::Code => unnormalized_align_scores.push(score),
+            DataFields::Website => unnormalized_align_scores.push(score),
+            DataFields::Location => align_scores.push(score),
+            DataFields::Category => unnormalized_align_scores.push(score),
+            DataFields::Day => align_scores.push(score),
+            DataFields::Hour => unnormalized_align_scores.push(score),
+        }
     }
+
+    // Normalize scores 
+    utils::normalize_vector(&mut unnormalized_align_scores);
+    align_scores.append(&mut unnormalized_align_scores);
+
     // Compute the final score by averaging the indivdual scores
-    let avg_score = total_align_score.iter().sum::<f64>() / total_align_score.len() as f64;
+    let avg_score = align_scores.iter().sum::<f64>() / align_scores.len() as f64;
     avg_score
 }
 

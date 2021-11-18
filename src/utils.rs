@@ -3,7 +3,7 @@ use crate::frequency::click_trace::FreqClickTrace;
 
 use std::{
     collections::HashMap, 
-    iter::FromIterator
+    iter::FromIterator,
 };
 use std::io::{
     prelude::*, 
@@ -14,6 +14,16 @@ use ordered_float::OrderedFloat;
 
 const OUTPUT_PATH: &str = "tmp/output";
 const EVAL_PATH: &str = "tmp/evaluation";
+
+
+pub fn normalize_vector(v: &mut [f64]) {
+    let norm = v.iter().map(|x| *x * *x ).sum::<f64>().sqrt();    
+    if norm > 0. {
+        for i in v.iter_mut() {
+            *i = *i / norm;
+        }
+    }
+}
 
 pub fn gen_vector_from_freq_map(
     type_to_freq_map: &HashMap<String, u32>,
