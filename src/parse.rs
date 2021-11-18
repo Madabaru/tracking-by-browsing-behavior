@@ -6,7 +6,7 @@ use crate::frequency::{
 use crate::sequence::click_trace::SeqClickTrace;
 
 use std::{
-    collections::HashMap,
+    collections::{BTreeMap, HashMap},
     convert::TryFrom,
     error::Error,
     str::FromStr,
@@ -54,14 +54,14 @@ impl FromStr for DataFields {
 
 pub fn parse_to_frequency(
     config: &Config,
-) -> Result<HashMap<u32, Vec<FreqClickTrace>>, Box<dyn Error>> {
+) -> Result<BTreeMap<u32, Vec<FreqClickTrace>>, Box<dyn Error>> {
     let mut prev_time: f64 = 0.0;
     let mut prev_client = String::new();
     let mut prev_location = String::new();
     let mut click_trace_len: usize = 0;
     let mut client_id: u32 = 0;
 
-    let mut client_to_freq_map: HashMap<u32, Vec<FreqClickTrace>> = HashMap::new();
+    let mut client_to_freq_map: BTreeMap<u32, Vec<FreqClickTrace>> = BTreeMap::new();
     let mut reader = csv::Reader::from_path(&config.path)?;
 
     for result in reader.deserialize() {
@@ -154,14 +154,14 @@ pub fn parse_to_frequency(
 
 pub fn parse_to_sequence(
     config: &Config,
-) -> Result<HashMap<u32, Vec<SeqClickTrace>>, Box<dyn Error>> {
+) -> Result<BTreeMap<u32, Vec<SeqClickTrace>>, Box<dyn Error>> {
     let mut prev_time: f64 = 0.0;
     let mut prev_client = String::new();
     let mut prev_location = String::new();
     let mut click_trace_len: usize = 0;
     let mut client_id: u32 = 0;
 
-    let mut client_to_seq_map: HashMap<u32, Vec<SeqClickTrace>> = HashMap::new();
+    let mut client_to_seq_map: BTreeMap<u32, Vec<SeqClickTrace>> = BTreeMap::new();
     let mut reader = csv::Reader::from_path(&config.path)?;
 
     let mut website_set: IndexSet<String> = IndexSet::new();
@@ -248,7 +248,7 @@ pub fn parse_to_sequence(
 
     // Remove any client with less than the minimum number of click traces
     log::info!("Number of clients before filtering: {:?}", client_to_seq_map.keys().len());
-    client_to_seq_map.retain(|_, value| value.len() >= config.min_num_click_traces);
+    // client_to_seq_map.retain(|_, value| value.len() >= config.min_num_click_traces);
     log::info!("Number of clients after filtering: {:?}", client_to_seq_map.keys().len());
     Ok(client_to_seq_map)
 }

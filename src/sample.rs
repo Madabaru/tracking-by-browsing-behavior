@@ -1,9 +1,9 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, BTreeMap};
 use rand::{seq::IteratorRandom, Rng};
 
 // Sample a subset of clients and a target click trace that the evaluation is based upon
 pub fn gen_test_data<R: Rng, T>(
-    client_to_vector_map: &HashMap<u32, Vec<T>>,
+    client_to_vector_map: &BTreeMap<u32, Vec<T>>,
     rng: &mut R,
     client_sample_size: usize,
 ) -> HashMap<u32, usize> {
@@ -24,7 +24,7 @@ pub fn gen_test_data<R: Rng, T>(
 
 // Sample click traces for each client and store sample indices in map
 pub fn get_train_data<R: Rng, T>(
-    client_to_vector_map: &HashMap<u32, Vec<T>>,
+    client_to_vector_map: &BTreeMap<u32, Vec<T>>,
     rng: &mut R,
     click_trace_sample_size: usize,
 ) -> HashMap<u32, Vec<usize>> {

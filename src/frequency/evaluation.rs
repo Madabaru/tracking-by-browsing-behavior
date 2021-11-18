@@ -9,7 +9,7 @@ use crate::frequency::{
 };
 
 use std::{
-    collections::HashMap,
+    collections::{HashMap, BTreeMap},
     str::FromStr,
 };
 use rayon::prelude::*;
@@ -17,7 +17,7 @@ use ordered_float::OrderedFloat;
 
 pub fn eval(
     config: &cli::Config,
-    client_to_hist_map: &HashMap<u32, Vec<FreqClickTrace>>,
+    client_to_freq_map: &BTreeMap<u32, Vec<FreqClickTrace>>,
     client_to_target_idx_map: &HashMap<u32, usize>,
     client_to_sample_idx_map: &HashMap<u32, Vec<usize>>,
 ) {
@@ -28,7 +28,7 @@ pub fn eval(
                 config,
                 client,
                 target_idx,
-                &client_to_hist_map,
+                &client_to_freq_map,
                 client_to_sample_idx_map,
             )
         })
@@ -66,19 +66,19 @@ fn eval_step(
     config: &cli::Config,
     client_target: &u32,
     target_idx: &usize,
-    client_to_hist_map: &HashMap<u32, Vec<FreqClickTrace>>,
+    client_to_freq_map: &BTreeMap<u32, Vec<FreqClickTrace>>,
     client_to_sample_idx_map: &HashMap<u32, Vec<usize>>,
 ) -> (u32, u32, bool, bool) {
     let metric = DistanceMetric::from_str(&config.metric).unwrap();
-    let target_hist = client_to_hist_map
+    let target_hist = client_to_freq_map
         .get(client_target)
         .unwrap()
         .get(*target_idx)
         .unwrap();
 
-    let mut tuples: Vec<(OrderedFloat<f64>, u32)> = Vec::with_capacity(client_to_hist_map.len());
+    let mut tuples: Vec<(OrderedFloat<f64>, u32)> = Vec::with_capacity(client_to_freq_map.len());
 
-    for (client, click_traces) in client_to_hist_map.into_iter() {
+    for (client, click_traces) in client_to_freq_map.into_iter() {
         let samples_idx = client_to_sample_idx_map.get(client).unwrap();
         let sampled_hists: Vec<FreqClickTrace> = samples_idx
             .into_iter()
@@ -127,7 +127,7 @@ fn eval_step(
         }
     }
     tuples.sort_unstable_by_key(|k| k.0);
-    let cutoff: usize = (0.1 * client_to_hist_map.len() as f64) as usize;
+    let cutoff: usize = (0.1 * client_to_freq_map.len() as f64) as usize;
     let is_top_10_percent = utils::is_target_in_top_k(client_target, &tuples[..cutoff]);
     let is_top_10: bool = utils::is_target_in_top_k(client_target, &tuples[..1]);
     (
