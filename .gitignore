@@ -80,3 +80,5 @@ fabric.properties
 logs/custom-scanners-service.log
 tmp/evaluation
 tmp/output
+tmp/output
+tmp/evaluation
