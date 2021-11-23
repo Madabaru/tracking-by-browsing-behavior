@@ -248,7 +248,7 @@ pub fn parse_to_sequence(
 
     // Remove any client with less than the minimum number of click traces
     log::info!("Number of clients before filtering: {:?}", client_to_seq_map.keys().len());
-    // client_to_seq_map.retain(|_, value| value.len() >= config.min_num_click_traces);
+    client_to_seq_map.retain(|_, value| value.len() >= config.min_num_click_traces);
     log::info!("Number of clients after filtering: {:?}", client_to_seq_map.keys().len());
     Ok(client_to_seq_map)
 }

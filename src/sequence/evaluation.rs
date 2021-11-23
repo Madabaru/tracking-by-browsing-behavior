@@ -1,15 +1,15 @@
-use crate::cli;
 use crate::parse::DataFields;
 use crate::sequence::click_trace::SeqClickTrace;
 use crate::utils;
+use crate::{cli, sequence};
 
+use ordered_float::OrderedFloat;
+use rayon::prelude::*;
+use seal::pair::{AlignmentSet, InMemoryAlignmentMatrix, NeedlemanWunsch, SmithWaterman};
 use std::{
     cmp::Reverse,
-    collections::{HashMap, BTreeMap}
+    collections::{BTreeMap, HashMap},
 };
-use seal::pair::{AlignmentSet, InMemoryAlignmentMatrix, NeedlemanWunsch, SmithWaterman};
-use rayon::prelude::*;
-use ordered_float::OrderedFloat;
 
 pub fn eval(
     config: &cli::Config,
@@ -52,9 +52,9 @@ pub fn eval(
     let top_10_percent: f64 = top_10_percent_count as f64 / result_list.len() as f64;
     log::info!("Top 10 Percent: {:?}", top_10_percent);
 
-    // Write result to output file for further processing in python 
+    // Write result to output file for further processing in python
     utils::write_to_output_file(result_list);
-    // Write metrics to final evaluation file 
+    // Write metrics to final evaluation file
     utils::write_to_eval_file(config, top_10, top_10_percent);
 }
 
@@ -75,21 +75,37 @@ fn eval_step(
 
     for (client, click_traces) in client_to_seq_map.into_iter() {
         let samples_idx = client_to_sample_idx_map.get(client).unwrap();
-        let sampled_click_trace: Vec<SeqClickTrace> = samples_idx
+
+        let sampled_click_traces: Vec<SeqClickTrace> = samples_idx
             .into_iter()
             .map(|idx| click_traces.get(*idx).unwrap().clone())
             .collect();
 
-        for sample_click_trace in sampled_click_trace.into_iter() {
+        if config.typical {
+            let typical_click_trace =
+                sequence::click_trace::gen_typical_click_trace(&sampled_click_traces);
+
             let score = compute_alignment_scores(
                 &config.fields,
                 &config.strategy,
                 &config.scope,
                 &config.scoring_matrix,
                 &target_click_trace,
-                &sample_click_trace,
+                &typical_click_trace,
             );
             tuples.push((OrderedFloat(score), client.clone()));
+        } else {
+            for sample_click_trace in sampled_click_traces.into_iter() {
+                let score = compute_alignment_scores(
+                    &config.fields,
+                    &config.strategy,
+                    &config.scope,
+                    &config.scoring_matrix,
+                    &target_click_trace,
+                    &sample_click_trace,
+                );
+                tuples.push((OrderedFloat(score), client.clone()));
+            }
         }
     }
     tuples.sort_unstable_by_key(|k| Reverse(k.0));
@@ -112,7 +128,6 @@ fn compute_alignment_scores(
     target_click_trace: &SeqClickTrace,
     ref_click_trace: &SeqClickTrace,
 ) -> f64 {
-
     let mut align_scores = Vec::<f64>::with_capacity(fields.len());
     let mut unnormalized_align_scores = Vec::<f64>::with_capacity(fields.len());
 
@@ -166,7 +181,7 @@ fn compute_alignment_scores(
         }
     }
 
-    // Normalize scores 
+    // Normalize scores
     utils::normalize_vector(&mut unnormalized_align_scores);
     align_scores.append(&mut unnormalized_align_scores);
 

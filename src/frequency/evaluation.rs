@@ -80,13 +80,13 @@ fn eval_step(
 
     for (client, click_traces) in client_to_freq_map.into_iter() {
         let samples_idx = client_to_sample_idx_map.get(client).unwrap();
-        let sampled_hists: Vec<FreqClickTrace> = samples_idx
+        let sampled_click_traces: Vec<FreqClickTrace> = samples_idx
             .into_iter()
             .map(|idx| click_traces.get(*idx).unwrap().clone())
             .collect();
 
         let (website_set, code_set, location_set, category_set) =
-            utils::get_unique_sets(target_hist, &sampled_hists);
+            utils::get_unique_sets(target_hist, &sampled_click_traces);
 
         let vectorized_target = click_trace::vectorize_click_trace(
             target_hist,
@@ -98,7 +98,7 @@ fn eval_step(
 
         if config.typical {
             let vect_typ_click_trace = click_trace::gen_typ_vectorized_click_trace(
-                &sampled_hists,
+                &sampled_click_traces,
                 &website_set,
                 &code_set,
                 &location_set,
@@ -112,7 +112,7 @@ fn eval_step(
             );
             tuples.push((OrderedFloat(dist), client.clone()));
         } else {
-            for sample_hist in sampled_hists.into_iter() {
+            for sample_hist in sampled_click_traces.into_iter() {
                 let vectorized_ref = click_trace::vectorize_click_trace(
                     &sample_hist,
                     &website_set,
