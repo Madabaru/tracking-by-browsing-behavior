@@ -144,15 +144,15 @@ fn compute_alignment_scores(
                 strategy,
                 scope,
                 scoring_matrix,
-                target_click_trace.website.clone(),
-                ref_click_trace.website.clone(),
+                target_click_trace.category.clone(),
+                ref_click_trace.category.clone(),
             ),
             DataFields::Code => compute_sequence_alignment(
                 strategy,
                 scope,
                 scoring_matrix,
-                target_click_trace.website.clone(),
-                ref_click_trace.website.clone(),
+                target_click_trace.code.clone(),
+                ref_click_trace.code.clone(),
             ),
             DataFields::Location => compute_similarity_score(
                 target_click_trace.location.clone(),
@@ -166,8 +166,8 @@ fn compute_alignment_scores(
                 strategy,
                 scope,
                 scoring_matrix,
-                target_click_trace.website.clone(),
-                ref_click_trace.website.clone(),
+                target_click_trace.hour.clone(),
+                ref_click_trace.hour.clone(),
             ),
         };
 
