@@ -22,6 +22,7 @@ fn main() {
     // Set random seed for reproducability
     let mut rng = StdRng::seed_from_u64(config.seed);
 
+    // Approach 1: Sequence alignment-based
     if config.approach == "sequence" {
 
         log::info!("Parsing data for sequence alignment-based approach...");
@@ -60,8 +61,10 @@ fn main() {
                 &client_to_sample_idx_map,
             );
         }
-
+        
+    // Approach 2: Frequency-based
     } else {
+        
         log::info!("Parsing data for frequency-based approach...");
         let client_to_freq_map: BTreeMap<u32, Vec<FreqClickTrace>> =
             parse::parse_to_frequency(&config).unwrap();

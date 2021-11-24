@@ -9,10 +9,10 @@ use std::{collections::HashMap, iter::FromIterator};
 const OUTPUT_PATH: &str = "tmp/output";
 const EVAL_PATH: &str = "tmp/evaluation";
 
-pub fn normalize_vector(v: &mut [f64]) {
-    let norm = v.iter().map(|x| *x * *x).sum::<f64>().sqrt();
+pub fn normalize_vector(vector: &mut [f64]) {
+    let norm = vector.iter().map(|x| *x * *x).sum::<f64>().sqrt();
     if norm > 0. {
-        for i in v.iter_mut() {
+        for i in vector.iter_mut() {
             *i = *i / norm;
         }
     }
@@ -81,10 +81,10 @@ pub fn get_unique_sets(
     (website_set, code_set, location_set, category_set)
 }
 
-pub fn write_to_output_file(result_list: Vec<(u32, u32, bool, bool)>) {
+pub fn write_to_output_file(tuple_list: Vec<(u32, u32, bool, bool)>) {
     let file = std::fs::File::create(OUTPUT_PATH).unwrap();
     let mut writer = BufWriter::new(&file);
-    for i in result_list {
+    for i in tuple_list {
         write!(writer, "{},{} \n", i.0, i.1).expect("Unable to write to output file.");
     }
 }
