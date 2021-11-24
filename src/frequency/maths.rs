@@ -1,10 +1,5 @@
 use nalgebra::MatrixXx1;
 
-// Create vector of i32 zeros
-pub fn zeros_i32(size: usize) -> Vec<i32> {
-    vec![0; size]
-}
-
 // Create vector of u32 zeros
 pub fn zeros_u32(size: usize) -> Vec<u32> {
     vec![0; size]

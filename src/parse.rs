@@ -12,6 +12,7 @@ use std::{
     str::FromStr,
     string::ParseError,
     time::{Duration, UNIX_EPOCH},
+    fmt::Display,
 };
 use chrono::{prelude::DateTime, Datelike, Timelike, Utc};
 use indexmap::IndexSet;
@@ -35,6 +36,12 @@ pub enum DataFields {
     Category,
     Day,
     Hour,
+}
+
+impl Display for DataFields {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}", self)
+    }
 }
 
 impl FromStr for DataFields {
