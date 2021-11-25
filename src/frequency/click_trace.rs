@@ -28,7 +28,7 @@ pub struct VectFreqClickTrace {
     pub day: Vec<u32>,
 }
 
-pub fn gen_typ_vectorized_click_trace(
+pub fn gen_typical_vect_click_trace(
     click_traces: &Vec<FreqClickTrace>,
     website_set: &IndexSet<String>,
     code_set: &IndexSet<String>,
@@ -44,19 +44,19 @@ pub fn gen_typ_vectorized_click_trace(
     let mut day_vec = maths::zeros_u32(7);
 
     for click_trace in click_traces.into_iter() {
-        let vectorized_click_trace = vectorize_click_trace(
+        let vect_click_trace = vectorize_click_trace(
             click_trace,
             website_set,
             code_set,
             location_set,
             category_set,
         );
-        website_vec = maths::add(website_vec, &vectorized_click_trace.website);
-        code_vec = maths::add(code_vec, &vectorized_click_trace.code);
-        location_vec = maths::add(location_vec, &vectorized_click_trace.location);
-        category_vec = maths::add(category_vec, &vectorized_click_trace.category);
-        day_vec = maths::add(day_vec, &vectorized_click_trace.day);
-        hour_vec = maths::add(hour_vec, &vectorized_click_trace.hour);
+        website_vec = maths::add(website_vec, &vect_click_trace.website);
+        code_vec = maths::add(code_vec, &vect_click_trace.code);
+        location_vec = maths::add(location_vec, &vect_click_trace.location);
+        category_vec = maths::add(category_vec, &vect_click_trace.category);
+        day_vec = maths::add(day_vec, &vect_click_trace.day);
+        hour_vec = maths::add(hour_vec, &vect_click_trace.hour);
     }
 
     let website_len = website_vec.len() as u32;
@@ -72,7 +72,7 @@ pub fn gen_typ_vectorized_click_trace(
     let day_len = category_vec.len() as u32;
     day_vec.iter_mut().for_each(|a| *a /= day_len);
 
-    let typ_vectorized_click_trace = VectFreqClickTrace {
+    let typical_vect_click_trace = VectFreqClickTrace {
         website: website_vec,
         code: code_vec,
         location: location_vec,
@@ -80,7 +80,7 @@ pub fn gen_typ_vectorized_click_trace(
         day: day_vec,
         hour: hour_vec,
     };
-    typ_vectorized_click_trace
+    typical_vect_click_trace
 }
 
 // Transform each histogram (as a hashmap) in a click trace into a vector to speed up further computations

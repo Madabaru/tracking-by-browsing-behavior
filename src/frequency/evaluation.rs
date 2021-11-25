@@ -101,7 +101,7 @@ fn eval_step(
         );
 
         if config.typical {
-            let vect_typ_click_trace = click_trace::gen_typ_vectorized_click_trace(
+            let vect_typ_click_trace = click_trace::gen_typical_vect_click_trace(
                 &sampled_click_traces,
                 &website_set,
                 &code_set,
