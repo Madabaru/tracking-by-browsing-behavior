@@ -19,13 +19,13 @@ pub struct FreqClickTrace {
 }
 
 #[derive(Debug, Clone)]
-pub struct VectFreqClickTrace {
-    pub website: Vec<u32>,
-    pub code: Vec<u32>,
-    pub location: Vec<u32>,
-    pub category: Vec<u32>,
-    pub hour: Vec<u32>,
-    pub day: Vec<u32>,
+pub struct VectFreqClickTrace<T> {
+    pub website: Vec<T>,
+    pub code: Vec<T>,
+    pub location: Vec<T>,
+    pub category: Vec<T>,
+    pub hour: Vec<T>,
+    pub day: Vec<T>,
 }
 
 pub fn gen_typical_vect_click_trace(
@@ -34,14 +34,14 @@ pub fn gen_typical_vect_click_trace(
     code_set: &IndexSet<String>,
     location_set: &IndexSet<String>,
     category_set: &IndexSet<String>,
-) -> VectFreqClickTrace {
+) -> VectFreqClickTrace<f64> {
     
-    let mut website_vec = maths::zeros_u32(website_set.len());
-    let mut code_vec = maths::zeros_u32(code_set.len());
-    let mut location_vec = maths::zeros_u32(location_set.len());
-    let mut category_vec = maths::zeros_u32(category_set.len());
-    let mut hour_vec = maths::zeros_u32(24);
-    let mut day_vec = maths::zeros_u32(7);
+    let mut website_vec = maths::zeros_f64(website_set.len());
+    let mut code_vec = maths::zeros_f64(code_set.len());
+    let mut location_vec = maths::zeros_f64(location_set.len());
+    let mut category_vec = maths::zeros_f64(category_set.len());
+    let mut hour_vec = maths::zeros_f64(24);
+    let mut day_vec = maths::zeros_f64(7);
 
     for click_trace in click_traces.into_iter() {
         let vect_click_trace = vectorize_click_trace(
@@ -59,17 +59,17 @@ pub fn gen_typical_vect_click_trace(
         hour_vec = maths::add(hour_vec, &vect_click_trace.hour);
     }
 
-    let website_len = website_vec.len() as u32;
+    let website_len = website_vec.len() as f64;
     website_vec.iter_mut().for_each(|a| *a /= website_len);
-    let code_len = code_vec.len() as u32;
+    let code_len = code_vec.len() as f64;
     code_vec.iter_mut().for_each(|a| *a /= code_len);
-    let location_len = location_vec.len() as u32;
+    let location_len = location_vec.len() as f64;
     location_vec.iter_mut().for_each(|a| *a /= location_len);
-    let category_len = category_vec.len() as u32;
+    let category_len = category_vec.len() as f64;
     category_vec.iter_mut().for_each(|a| *a /= category_len);
-    let hour_len = category_vec.len() as u32;
+    let hour_len = category_vec.len() as f64;
     hour_vec.iter_mut().for_each(|a| *a /= hour_len);
-    let day_len = category_vec.len() as u32;
+    let day_len = category_vec.len() as f64;
     day_vec.iter_mut().for_each(|a| *a /= day_len);
 
     let typical_vect_click_trace = VectFreqClickTrace {
@@ -90,7 +90,7 @@ pub fn vectorize_click_trace(
     code_set: &IndexSet<String>,
     location_set: &IndexSet<String>,
     category_set: &IndexSet<String>,
-) -> VectFreqClickTrace {
+) -> VectFreqClickTrace<u32> {
     let vectorized_click_trace = VectFreqClickTrace {
         website: utils::gen_vector_from_freq_map(&click_trace.website, website_set),
         code: utils::gen_vector_from_freq_map(&click_trace.code, code_set),

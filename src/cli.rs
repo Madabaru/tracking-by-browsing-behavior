@@ -33,7 +33,7 @@ pub fn get_cli_config() -> Result<Config, clap::Error> {
                 .long("approach")
                 .about("Sequence alignment-based or frequency-based approach.")
                 .possible_values(&["sequence", "frequency"])
-                .default_value("sequence"),
+                .default_value("frequency"),
         )
         .arg(
             clap::Arg::new("scoring_matrix")
@@ -115,7 +115,7 @@ pub fn get_cli_config() -> Result<Config, clap::Error> {
         .arg(
             clap::Arg::new("metric")
                 .long("metric")
-                .default_value("euclidean")
+                .default_value("kullbrack_leibler")
                 .about("Distance metric to compare a pair of click traces.")
                 .possible_values(&["euclidean", "manhatten", "cosine", "jaccard", "bhattacharyya", "kullbrack_leibler", "total_variation", "jeffries_matusita", "chi_quared"]),
         )

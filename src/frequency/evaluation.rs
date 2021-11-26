@@ -143,12 +143,16 @@ fn eval_step(
 }
 
 // Calculate the distance between the target and the reference click trace
-fn compute_dist(
+fn compute_dist<T, U>(
     fields: &Vec<DataFields>,
     metric: &DistanceMetric,
-    target_click_trace: &VectFreqClickTrace,
-    ref_click_trace: &VectFreqClickTrace,
-) -> f64 {
+    target_click_trace: &VectFreqClickTrace<T>,
+    ref_click_trace: &VectFreqClickTrace<U>,
+) -> f64 
+    where
+        T: Clone + std::cmp::PartialEq + std::fmt::Debug + num_traits::ToPrimitive + std::cmp::PartialOrd + num_traits::Zero,
+        U: Clone + std::cmp::PartialEq + std::fmt::Debug + num_traits::ToPrimitive + std::cmp::PartialOrd + num_traits::Zero
+{
     // Vector to store distance scores for each data field to be considered
     let mut total_dist = Vec::<f64>::with_capacity(fields.len());
 
@@ -183,6 +187,7 @@ fn compute_dist(
             DistanceMetric::Manhatten => metrics::manhatten_dist(target_vector, ref_vector),
             DistanceMetric::Cosine => metrics::consine_dist(target_vector, ref_vector),
             DistanceMetric::Jaccard => metrics::jaccard_dist(target_vector, ref_vector),
+            // DistanceMetric::Jaccard => todo!(),
             DistanceMetric::Bhattacharyya => metrics::bhattacharyya_dist(target_vector, ref_vector),
             DistanceMetric::KullbrackLeibler => metrics::kl_dist(target_vector, ref_vector),
             DistanceMetric::TotalVariation => metrics::total_var_dist(target_vector, ref_vector),

@@ -1,4 +1,6 @@
 use crate::frequency::maths;
+use num_traits::ToPrimitive;
+
 
 use nalgebra::EuclideanNorm;
 use nalgebra::LpNorm;
@@ -29,7 +31,7 @@ impl FromStr for DistanceMetric {
             "manhatten" => Ok(DistanceMetric::Manhatten),
             "cosine" => Ok(DistanceMetric::Cosine),
             "jaccard" => Ok(DistanceMetric::Jaccard),
-            "J" => Ok(DistanceMetric::Bhattacharyya),
+            "bhattacharyya" => Ok(DistanceMetric::Bhattacharyya),
             "kullbrack_leibler" => Ok(DistanceMetric::KullbrackLeibler),
             "total_variation" => Ok(DistanceMetric::TotalVariation),
             "jeffries_matusita" => Ok(DistanceMetric::JeffriesMatusita),
@@ -39,21 +41,33 @@ impl FromStr for DistanceMetric {
     }
 }
 
-pub fn euclidean_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
+pub fn euclidean_dist<T, U>(target_vec: Vec<T>, ref_vec: Vec<U>) -> f64 
+where 
+    T: Clone + std::cmp::PartialEq + std::fmt::Debug + ToPrimitive,
+    U: Clone + std::cmp::PartialEq + std::fmt::Debug + ToPrimitive
+{
     let target_matrix = maths::vec_to_matrix(target_vec, true);
     let ref_matrix = maths::vec_to_matrix(ref_vec, true);
     let dist = target_matrix.apply_metric_distance(&ref_matrix, &EuclideanNorm);
     dist
 }
 
-pub fn manhatten_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
+pub fn manhatten_dist<T, U>(target_vec: Vec<T>, ref_vec: Vec<U>) -> f64 
+where       
+    T: Clone + std::cmp::PartialEq + std::fmt::Debug + ToPrimitive,
+    U: Clone + std::cmp::PartialEq + std::fmt::Debug + ToPrimitive
+{
     let target_matrix = maths::vec_to_matrix(target_vec, true);
     let ref_matrix = maths::vec_to_matrix(ref_vec, true);
     let dist = target_matrix.apply_metric_distance(&ref_matrix, &LpNorm(1));
     dist
 }
 
-pub fn consine_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
+pub fn consine_dist<T, U>(target_vec: Vec<T>, ref_vec: Vec<U>) -> f64 
+where 
+    T: Clone + std::cmp::PartialEq + std::fmt::Debug + ToPrimitive,
+    U: Clone + std::cmp::PartialEq + std::fmt::Debug + ToPrimitive
+{
     let target_matrix = maths::vec_to_matrix(target_vec, false);
     let ref_matrix = maths::vec_to_matrix(ref_vec, false);
     let norms = target_matrix.norm() * ref_matrix.norm();
@@ -63,7 +77,11 @@ pub fn consine_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
     1.0
 }
 
-pub fn bhattacharyya_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
+pub fn bhattacharyya_dist<T, U>(target_vec: Vec<T>, ref_vec: Vec<U>) -> f64 
+where 
+    T: Clone + std::cmp::PartialEq + std::fmt::Debug + ToPrimitive,
+    U: Clone + std::cmp::PartialEq + std::fmt::Debug + ToPrimitive
+{
     let target_matrix = maths::vec_to_matrix(target_vec, true);
     let ref_matrix = maths::vec_to_matrix(ref_vec, true);
     let dist = target_matrix.zip_fold(&ref_matrix, 0.0, |acc, a, b| {
@@ -73,7 +91,11 @@ pub fn bhattacharyya_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
     -f64::log(dist, E)
 }
 
-pub fn kl_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
+pub fn kl_dist<T, U>(target_vec: Vec<T>, ref_vec: Vec<U>) -> f64 
+where 
+    T: Clone + std::cmp::PartialEq + std::fmt::Debug + ToPrimitive,
+    U: Clone + std::cmp::PartialEq + std::fmt::Debug + ToPrimitive
+{
     let target_matrix = maths::vec_to_matrix(target_vec, true);
     let ref_matrix = maths::vec_to_matrix(ref_vec, true);
     let eps = f64::EPSILON;
@@ -86,7 +108,11 @@ pub fn kl_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
     -dist
 }
 
-pub fn total_var_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
+pub fn total_var_dist<T, U>(target_vec: Vec<T>, ref_vec: Vec<U>) -> f64 
+where 
+    T: Clone + std::cmp::PartialEq + std::fmt::Debug + ToPrimitive,
+    U: Clone + std::cmp::PartialEq + std::fmt::Debug + ToPrimitive
+{
     let target_matrix = maths::vec_to_matrix(target_vec, true);
     let ref_matrix = maths::vec_to_matrix(ref_vec, true);
     let dist = target_matrix.zip_fold(&ref_matrix, 0.0, |acc, a, b| {
@@ -96,7 +122,11 @@ pub fn total_var_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
     dist
 }
 
-pub fn jeffries_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
+pub fn jeffries_dist<T, U>(target_vec: Vec<T>, ref_vec: Vec<U>) -> f64 
+where 
+    T: Clone + std::cmp::PartialEq + std::fmt::Debug + ToPrimitive,
+    U: Clone + std::cmp::PartialEq + std::fmt::Debug + ToPrimitive
+{
     let target_matrix = maths::vec_to_matrix(target_vec, true);
     let ref_matrix = maths::vec_to_matrix(ref_vec, true);
     let sq_sum = target_matrix.zip_fold(&ref_matrix, 0.0, |acc, a, b| {
@@ -108,7 +138,11 @@ pub fn jeffries_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
     dist
 }
 
-pub fn chi_squared_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
+pub fn chi_squared_dist<T, U>(target_vec: Vec<T>, ref_vec: Vec<U>) -> f64 
+where 
+    T: Clone + std::cmp::PartialEq + std::fmt::Debug + ToPrimitive,
+    U: Clone + std::cmp::PartialEq + std::fmt::Debug + ToPrimitive
+{
     let target_matrix = maths::vec_to_matrix(target_vec, true);
     let ref_matrix = maths::vec_to_matrix(ref_vec, true);
     let eps = f64::EPSILON;
@@ -123,17 +157,21 @@ pub fn chi_squared_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
     dist
 }
 
-pub fn jaccard_dist(target_vec: Vec<u32>, ref_vec: Vec<u32>) -> f64 {
+pub fn jaccard_dist<T, U>(target_vec: Vec<T>, ref_vec: Vec<U>) -> f64 
+where 
+    T: Clone + std::cmp::PartialEq + std::fmt::Debug + ToPrimitive + std::cmp::PartialOrd + num_traits::Zero,
+    U: Clone + std::cmp::PartialEq + std::fmt::Debug + ToPrimitive + std::cmp::PartialOrd + num_traits::Zero,
+{
     let non_zero_target: Vec<usize> = target_vec
         .into_iter()
         .enumerate()
-        .filter(|&(_, v)| v > 0)
+        .filter(|(_, v)| *v > num::zero())
         .map(|(i, _)| i)
         .collect();
     let non_zero_ref: Vec<usize> = ref_vec
         .into_iter()
         .enumerate()
-        .filter(|&(_, v)| v > 0)
+        .filter(|(_, v)| *v > num::zero())
         .map(|(i, _)| i)
         .collect();
     let target_set: HashSet<usize> = non_zero_target.into_iter().collect();

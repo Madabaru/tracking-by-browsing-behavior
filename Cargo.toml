@@ -19,3 +19,4 @@ num-traits = "0.2.14"
 chrono = "0.4"
 ordered-float = "2.8.0"
 clap = { version = "3.0.0-beta.5", features = ["yaml"] }
+num = "0.4.0"
