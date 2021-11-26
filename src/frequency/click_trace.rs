@@ -2,7 +2,6 @@ use crate::frequency::maths;
 use crate::utils;
 
 use std::collections::HashMap;
-
 use indexmap::IndexSet;
 
 #[derive(Debug, Clone)]
@@ -35,7 +34,6 @@ pub fn gen_typical_vect_click_trace(
     location_set: &IndexSet<String>,
     category_set: &IndexSet<String>,
 ) -> VectFreqClickTrace<f64> {
-    
     let mut website_vec = maths::zeros_f64(website_set.len());
     let mut code_vec = maths::zeros_f64(code_set.len());
     let mut location_vec = maths::zeros_f64(location_set.len());

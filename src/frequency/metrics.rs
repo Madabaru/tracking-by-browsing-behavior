@@ -1,6 +1,6 @@
 use crate::frequency::maths;
-use num_traits::ToPrimitive;
 
+use num_traits::ToPrimitive;
 use nalgebra::EuclideanNorm;
 use nalgebra::LpNorm;
 use std::{collections::HashSet, f64::consts::E, str::FromStr};
