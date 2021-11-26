@@ -1,21 +1,21 @@
 use crate::cli;
-use crate::parse::DataFields;
-use crate::utils;
 use crate::frequency::{
     click_trace,
     click_trace::{FreqClickTrace, VectFreqClickTrace},
     metrics,
     metrics::DistanceMetric,
 };
+use crate::parse::DataFields;
+use crate::utils;
 
-use std::{
-    collections::{HashMap, BTreeMap},
-    str::FromStr,
-    iter::FromIterator
-};
 use indexmap::IndexSet;
-use rayon::prelude::*;
 use ordered_float::OrderedFloat;
+use rayon::prelude::*;
+use std::{
+    collections::{BTreeMap, HashMap},
+    iter::FromIterator,
+    str::FromStr,
+};
 
 pub fn eval(
     config: &cli::Config,
@@ -60,7 +60,7 @@ pub fn eval(
 
     // Write result to output file for further processing in python
     utils::write_to_output(result_list);
-    // Write metrics to final evaluation file 
+    // Write metrics to final evaluation file
     utils::write_to_eval(config, top_10, top_10_percent);
 }
 
@@ -87,10 +87,22 @@ fn eval_step(
             .map(|idx| click_traces.get(*idx).unwrap().clone())
             .collect();
 
-        let website_set = get_unique_set(target_click_trace, &sampled_click_traces, &DataFields::Website);
+        let website_set = get_unique_set(
+            target_click_trace,
+            &sampled_click_traces,
+            &DataFields::Website,
+        );
         let code_set = get_unique_set(target_click_trace, &sampled_click_traces, &DataFields::Code);
-        let location_set = get_unique_set(target_click_trace, &sampled_click_traces, &DataFields::Location);
-        let category_set = get_unique_set(target_click_trace, &sampled_click_traces, &DataFields::Category);
+        let location_set = get_unique_set(
+            target_click_trace,
+            &sampled_click_traces,
+            &DataFields::Location,
+        );
+        let category_set = get_unique_set(
+            target_click_trace,
+            &sampled_click_traces,
+            &DataFields::Category,
+        );
 
         let vectorized_target = click_trace::vectorize_click_trace(
             target_click_trace,
@@ -148,10 +160,20 @@ fn compute_dist<T, U>(
     metric: &DistanceMetric,
     target_click_trace: &VectFreqClickTrace<T>,
     ref_click_trace: &VectFreqClickTrace<U>,
-) -> f64 
-    where
-        T: Clone + std::cmp::PartialEq + std::fmt::Debug + num_traits::ToPrimitive + std::cmp::PartialOrd + num_traits::Zero,
-        U: Clone + std::cmp::PartialEq + std::fmt::Debug + num_traits::ToPrimitive + std::cmp::PartialOrd + num_traits::Zero
+) -> f64
+where
+    T: Clone
+        + std::cmp::PartialEq
+        + std::fmt::Debug
+        + num_traits::ToPrimitive
+        + std::cmp::PartialOrd
+        + num_traits::Zero,
+    U: Clone
+        + std::cmp::PartialEq
+        + std::fmt::Debug
+        + num_traits::ToPrimitive
+        + std::cmp::PartialOrd
+        + num_traits::Zero,
 {
     // Vector to store distance scores for each data field to be considered
     let mut total_dist = Vec::<f64>::with_capacity(fields.len());
@@ -202,13 +224,11 @@ fn compute_dist<T, U>(
     avg_dist
 }
 
-
 pub fn get_unique_set(
     target_click_trace: &FreqClickTrace,
     sampled_click_traces: &Vec<FreqClickTrace>,
     field: &DataFields,
 ) -> IndexSet<String> {
-
     let mut vector: Vec<String> = match field {
         DataFields::Website => target_click_trace.website.keys().cloned().collect(),
         DataFields::Code => target_click_trace.code.keys().cloned().collect(),
@@ -229,4 +249,3 @@ pub fn get_unique_set(
     let set: IndexSet<String> = IndexSet::from_iter(vector);
     set
 }
-

@@ -1,14 +1,9 @@
 use crate::frequency::maths;
 use num_traits::ToPrimitive;
 
-
 use nalgebra::EuclideanNorm;
 use nalgebra::LpNorm;
-use std::{
-    collections::HashSet, 
-    f64::consts::E, 
-    str::FromStr
-};
+use std::{collections::HashSet, f64::consts::E, str::FromStr};
 
 #[derive(Debug)]
 pub enum DistanceMetric {
@@ -41,10 +36,10 @@ impl FromStr for DistanceMetric {
     }
 }
 
-pub fn euclidean_dist<T, U>(target_vec: Vec<T>, ref_vec: Vec<U>) -> f64 
-where 
+pub fn euclidean_dist<T, U>(target_vec: Vec<T>, ref_vec: Vec<U>) -> f64
+where
     T: Clone + std::cmp::PartialEq + std::fmt::Debug + ToPrimitive,
-    U: Clone + std::cmp::PartialEq + std::fmt::Debug + ToPrimitive
+    U: Clone + std::cmp::PartialEq + std::fmt::Debug + ToPrimitive,
 {
     let target_matrix = maths::vec_to_matrix(target_vec, true);
     let ref_matrix = maths::vec_to_matrix(ref_vec, true);
@@ -52,10 +47,10 @@ where
     dist
 }
 
-pub fn manhatten_dist<T, U>(target_vec: Vec<T>, ref_vec: Vec<U>) -> f64 
-where       
+pub fn manhatten_dist<T, U>(target_vec: Vec<T>, ref_vec: Vec<U>) -> f64
+where
     T: Clone + std::cmp::PartialEq + std::fmt::Debug + ToPrimitive,
-    U: Clone + std::cmp::PartialEq + std::fmt::Debug + ToPrimitive
+    U: Clone + std::cmp::PartialEq + std::fmt::Debug + ToPrimitive,
 {
     let target_matrix = maths::vec_to_matrix(target_vec, true);
     let ref_matrix = maths::vec_to_matrix(ref_vec, true);
@@ -63,10 +58,10 @@ where
     dist
 }
 
-pub fn consine_dist<T, U>(target_vec: Vec<T>, ref_vec: Vec<U>) -> f64 
-where 
+pub fn consine_dist<T, U>(target_vec: Vec<T>, ref_vec: Vec<U>) -> f64
+where
     T: Clone + std::cmp::PartialEq + std::fmt::Debug + ToPrimitive,
-    U: Clone + std::cmp::PartialEq + std::fmt::Debug + ToPrimitive
+    U: Clone + std::cmp::PartialEq + std::fmt::Debug + ToPrimitive,
 {
     let target_matrix = maths::vec_to_matrix(target_vec, false);
     let ref_matrix = maths::vec_to_matrix(ref_vec, false);
@@ -77,10 +72,10 @@ where
     1.0
 }
 
-pub fn bhattacharyya_dist<T, U>(target_vec: Vec<T>, ref_vec: Vec<U>) -> f64 
-where 
+pub fn bhattacharyya_dist<T, U>(target_vec: Vec<T>, ref_vec: Vec<U>) -> f64
+where
     T: Clone + std::cmp::PartialEq + std::fmt::Debug + ToPrimitive,
-    U: Clone + std::cmp::PartialEq + std::fmt::Debug + ToPrimitive
+    U: Clone + std::cmp::PartialEq + std::fmt::Debug + ToPrimitive,
 {
     let target_matrix = maths::vec_to_matrix(target_vec, true);
     let ref_matrix = maths::vec_to_matrix(ref_vec, true);
@@ -91,10 +86,10 @@ where
     -f64::log(dist, E)
 }
 
-pub fn kl_dist<T, U>(target_vec: Vec<T>, ref_vec: Vec<U>) -> f64 
-where 
+pub fn kl_dist<T, U>(target_vec: Vec<T>, ref_vec: Vec<U>) -> f64
+where
     T: Clone + std::cmp::PartialEq + std::fmt::Debug + ToPrimitive,
-    U: Clone + std::cmp::PartialEq + std::fmt::Debug + ToPrimitive
+    U: Clone + std::cmp::PartialEq + std::fmt::Debug + ToPrimitive,
 {
     let target_matrix = maths::vec_to_matrix(target_vec, true);
     let ref_matrix = maths::vec_to_matrix(ref_vec, true);
@@ -108,10 +103,10 @@ where
     -dist
 }
 
-pub fn total_var_dist<T, U>(target_vec: Vec<T>, ref_vec: Vec<U>) -> f64 
-where 
+pub fn total_var_dist<T, U>(target_vec: Vec<T>, ref_vec: Vec<U>) -> f64
+where
     T: Clone + std::cmp::PartialEq + std::fmt::Debug + ToPrimitive,
-    U: Clone + std::cmp::PartialEq + std::fmt::Debug + ToPrimitive
+    U: Clone + std::cmp::PartialEq + std::fmt::Debug + ToPrimitive,
 {
     let target_matrix = maths::vec_to_matrix(target_vec, true);
     let ref_matrix = maths::vec_to_matrix(ref_vec, true);
@@ -122,10 +117,10 @@ where
     dist
 }
 
-pub fn jeffries_dist<T, U>(target_vec: Vec<T>, ref_vec: Vec<U>) -> f64 
-where 
+pub fn jeffries_dist<T, U>(target_vec: Vec<T>, ref_vec: Vec<U>) -> f64
+where
     T: Clone + std::cmp::PartialEq + std::fmt::Debug + ToPrimitive,
-    U: Clone + std::cmp::PartialEq + std::fmt::Debug + ToPrimitive
+    U: Clone + std::cmp::PartialEq + std::fmt::Debug + ToPrimitive,
 {
     let target_matrix = maths::vec_to_matrix(target_vec, true);
     let ref_matrix = maths::vec_to_matrix(ref_vec, true);
@@ -138,10 +133,10 @@ where
     dist
 }
 
-pub fn chi_squared_dist<T, U>(target_vec: Vec<T>, ref_vec: Vec<U>) -> f64 
-where 
+pub fn chi_squared_dist<T, U>(target_vec: Vec<T>, ref_vec: Vec<U>) -> f64
+where
     T: Clone + std::cmp::PartialEq + std::fmt::Debug + ToPrimitive,
-    U: Clone + std::cmp::PartialEq + std::fmt::Debug + ToPrimitive
+    U: Clone + std::cmp::PartialEq + std::fmt::Debug + ToPrimitive,
 {
     let target_matrix = maths::vec_to_matrix(target_vec, true);
     let ref_matrix = maths::vec_to_matrix(ref_vec, true);
@@ -157,10 +152,20 @@ where
     dist
 }
 
-pub fn jaccard_dist<T, U>(target_vec: Vec<T>, ref_vec: Vec<U>) -> f64 
-where 
-    T: Clone + std::cmp::PartialEq + std::fmt::Debug + ToPrimitive + std::cmp::PartialOrd + num_traits::Zero,
-    U: Clone + std::cmp::PartialEq + std::fmt::Debug + ToPrimitive + std::cmp::PartialOrd + num_traits::Zero,
+pub fn jaccard_dist<T, U>(target_vec: Vec<T>, ref_vec: Vec<U>) -> f64
+where
+    T: Clone
+        + std::cmp::PartialEq
+        + std::fmt::Debug
+        + ToPrimitive
+        + std::cmp::PartialOrd
+        + num_traits::Zero,
+    U: Clone
+        + std::cmp::PartialEq
+        + std::fmt::Debug
+        + ToPrimitive
+        + std::cmp::PartialOrd
+        + num_traits::Zero,
 {
     let non_zero_target: Vec<usize> = target_vec
         .into_iter()
