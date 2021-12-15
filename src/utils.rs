@@ -17,6 +17,15 @@ pub fn normalize_vector(vector: &mut [f64]) {
     }
 }
 
+pub fn gen_vector_from_f64(click_rate: f64, min: f64, max: f64) -> Vec<u32> {
+    let diff = max - min;
+    let length = (diff / 0.1) as usize;
+    let idx = (click_rate / 0.1) as usize;
+    let mut vector: Vec<u32> = vec![0; length];
+    vector[idx] = 1;
+    vector
+}
+
 pub fn gen_vector_from_freq_map(
     type_to_freq_map: &HashMap<String, u32>,
     set: &IndexSet<String>,

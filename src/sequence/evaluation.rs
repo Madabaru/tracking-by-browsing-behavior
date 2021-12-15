@@ -111,7 +111,7 @@ fn eval_step(
     tuples.sort_unstable_by_key(|k| Reverse(k.0));
     let cutoff: usize = (0.1 * client_to_seq_map.len() as f64) as usize;
     let is_top_10_percent = utils::is_target_in_top_k(client_target, &tuples[..cutoff]);
-    let is_top_10: bool = utils::is_target_in_top_k(client_target, &tuples[..1]);
+    let is_top_10: bool = utils::is_target_in_top_k(client_target, &tuples[..10]);
     (
         client_target.clone(),
         tuples[0].1,
@@ -126,58 +126,70 @@ fn compute_alignment_scores(
     scope: &str,
     scoring_matrix: &[isize],
     target_click_trace: &SeqClickTrace,
-    ref_click_trace: &SeqClickTrace,
+    sample_click_trace: &SeqClickTrace,
 ) -> f64 {
     let mut align_scores = Vec::<f64>::with_capacity(fields.len());
     let mut unnormalized_align_scores = Vec::<f64>::with_capacity(fields.len());
 
     for field in fields.into_iter() {
         let score = match field {
-            DataFields::Website => compute_sequence_alignment(
+            DataFields::Url => compute_sequence_alignment(
                 strategy,
                 scope,
                 scoring_matrix,
-                target_click_trace.website.clone(),
-                ref_click_trace.website.clone(),
+                target_click_trace.url.clone(),
+                sample_click_trace.url.clone(),
             ),
             DataFields::Category => compute_sequence_alignment(
                 strategy,
                 scope,
                 scoring_matrix,
                 target_click_trace.category.clone(),
-                ref_click_trace.category.clone(),
+                sample_click_trace.category.clone(),
             ),
-            DataFields::Code => compute_sequence_alignment(
+            DataFields::Domain => compute_sequence_alignment(
                 strategy,
                 scope,
                 scoring_matrix,
-                target_click_trace.code.clone(),
-                ref_click_trace.code.clone(),
-            ),
-            DataFields::Location => compute_similarity_score(
-                target_click_trace.location.clone(),
-                ref_click_trace.location.clone(),
+                target_click_trace.domain.clone(),
+                sample_click_trace.domain.clone(),
             ),
             DataFields::Day => compute_similarity_score(
                 target_click_trace.day.clone(),
-                ref_click_trace.day.clone(),
+                sample_click_trace.day.clone(),
             ),
             DataFields::Hour => compute_sequence_alignment(
                 strategy,
                 scope,
                 scoring_matrix,
                 target_click_trace.hour.clone(),
-                ref_click_trace.hour.clone(),
+                sample_click_trace.hour.clone(),
             ),
+            DataFields::Gender => compute_similarity_score(
+                target_click_trace.gender.clone(),
+                sample_click_trace.gender.clone(),
+            ),
+            DataFields::Age => compute_similarity_score(
+                target_click_trace.age.clone(),
+                sample_click_trace.age.clone(),
+            ),
+            DataFields::ClickRate => compute_absolute_error_score(
+                target_click_trace.click_rate.clone(),
+                sample_click_trace.click_rate.clone(),
+            ),
+            _ => panic!("Error: unknown field name supplied: {}", field),
         };
 
         match field {
-            DataFields::Code => unnormalized_align_scores.push(score),
-            DataFields::Website => unnormalized_align_scores.push(score),
-            DataFields::Location => align_scores.push(score),
+            DataFields::Url => unnormalized_align_scores.push(score),
+            DataFields::Domain => unnormalized_align_scores.push(score),
             DataFields::Category => unnormalized_align_scores.push(score),
             DataFields::Day => align_scores.push(score),
             DataFields::Hour => unnormalized_align_scores.push(score),
+            DataFields::Gender => align_scores.push(score),
+            DataFields::Age => align_scores.push(score),
+            DataFields::ClickRate => align_scores.push(score),
+            _ => panic!("Error: unknown field name supplied: {}", field),
         }
     }
 
@@ -240,5 +252,10 @@ fn compute_similarity_score<T: std::cmp::PartialEq>(target: T, reference: T) -> 
     } else {
         score = 0.0;
     }
+    score
+}
+
+fn compute_absolute_error_score(target: f64, reference: f64) -> f64 {
+    let score = f64::abs(target - reference);
     score
 }

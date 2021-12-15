@@ -1,4 +1,4 @@
-use crate::{parse::DataFields};
+use crate::parse::DataFields;
 
 use std::str::FromStr;
 
@@ -23,7 +23,6 @@ pub struct Config {
     pub scope: String,
 }
 
-
 pub fn get_cli_config() -> Result<Config, clap::Error> {
     let matches = clap::App::new("Tracking-Users-by-Browsing-Behavior")
         .version("1.0")
@@ -40,7 +39,7 @@ pub fn get_cli_config() -> Result<Config, clap::Error> {
                 .long("scoring_matrix")
                 .about("The scoring matrix to use for the alignment approach: ['equal', 'align', 'insert', 'delete'].")
                 .multiple_values(true)
-                .default_values(&["1", "-1", "-1", "-1"])
+                .default_values(&["1", "-1", "0", "0"])
         )
         .arg(
             clap::Arg::new("scope")
@@ -54,7 +53,7 @@ pub fn get_cli_config() -> Result<Config, clap::Error> {
                 .long("strategy")
                 .about("The alignment strategy to use.")
                 .possible_values(&["sw", "nw"])
-                .default_value("nw"),
+                .default_value("sw"),
         )
         .arg(
             clap::Arg::new("delay_limit")
@@ -65,10 +64,10 @@ pub fn get_cli_config() -> Result<Config, clap::Error> {
         .arg(
             clap::Arg::new("fields")
                 .long("fields")
-                .possible_values(&["website", "category", "code", "location", "hour", "day"])
+                .possible_values(&["url", "category", "domain", "hour", "day", "age", "gender", "click_rate"])
                 .about("Data fields to consider for the analysis.")
                 .multiple_values(true)
-                .default_values(&["website", "category", "code", "location"])
+                .default_values(&["url", "category", "domain", "age", "gender"])
         )
         .arg(
             clap::Arg::new("max_click_trace_len")
@@ -79,7 +78,7 @@ pub fn get_cli_config() -> Result<Config, clap::Error> {
         .arg(
             clap::Arg::new("min_click_trace_len")
                 .long("min_click_trace_len")
-                .default_value("3")
+                .default_value("10")
                 .about("Minimum length of a single click trace."),
         )
         .arg(
@@ -91,7 +90,7 @@ pub fn get_cli_config() -> Result<Config, clap::Error> {
         .arg(
             clap::Arg::new("min_num_click_traces")
                 .long("min_num_click_traces")
-                .default_value("2")
+                .default_value("4")
                 .about("Minimum number of click traces per client."),
         )
         .arg(
@@ -103,26 +102,26 @@ pub fn get_cli_config() -> Result<Config, clap::Error> {
         .arg(
             clap::Arg::new("client_sample_size")
                 .long("client_sample_size")
-                .default_value("10")
+                .default_value("400")
                 .about("Number of clients to sample."),
         )
         .arg(
             clap::Arg::new("click_trace_sample_size")
                 .long("click_trace_sample_size")
-                .default_value("3")
+                .default_value("20")
                 .about("Number of click traces to sample per client"),
         )
         .arg(
             clap::Arg::new("metric")
                 .long("metric")
-                .default_value("kullbrack_leibler")
+                .default_value("euclidean")
                 .about("Distance metric to compare a pair of click traces.")
                 .possible_values(&["euclidean", "manhatten", "cosine", "jaccard", "bhattacharyya", "kullbrack_leibler", "total_variation", "jeffries_matusita", "chi_quared"]),
         )
         .arg(
             clap::Arg::new("path")
                 .long("path")
-                .default_value("data/test.csv")
+                .default_value("data/browsing.csv")
                 .about("Path to the dataset.")
         )
         .arg(

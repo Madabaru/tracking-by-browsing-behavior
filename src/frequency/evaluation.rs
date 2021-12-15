@@ -87,57 +87,61 @@ fn eval_step(
             .map(|idx| click_traces.get(*idx).unwrap().clone())
             .collect();
 
-        let website_set = get_unique_set(
+        let url_set = get_unique_set(target_click_trace, &sampled_click_traces, &DataFields::Url);
+        let domain_set = get_unique_set(
             target_click_trace,
             &sampled_click_traces,
-            &DataFields::Website,
-        );
-        let code_set = get_unique_set(target_click_trace, &sampled_click_traces, &DataFields::Code);
-        let location_set = get_unique_set(
-            target_click_trace,
-            &sampled_click_traces,
-            &DataFields::Location,
+            &DataFields::Domain,
         );
         let category_set = get_unique_set(
             target_click_trace,
             &sampled_click_traces,
             &DataFields::Category,
         );
-
-        let vectorized_target = click_trace::vectorize_click_trace(
+        let age_set = get_unique_set(target_click_trace, &sampled_click_traces, &DataFields::Age);
+        let gender_set = get_unique_set(
             target_click_trace,
-            &website_set,
-            &code_set,
-            &location_set,
+            &sampled_click_traces,
+            &DataFields::Gender,
+        );
+
+        let vect_target_click_trace = click_trace::vectorize_click_trace(
+            target_click_trace,
+            &url_set,
+            &domain_set,
             &category_set,
+            &age_set,
+            &gender_set,
         );
 
         if config.typical {
-            let vect_typ_click_trace = click_trace::gen_typical_vect_click_trace(
+            let vect_typ_ref_click_trace = click_trace::gen_typical_vect_click_trace(
                 &sampled_click_traces,
-                &website_set,
-                &code_set,
-                &location_set,
+                &url_set,
+                &domain_set,
                 &category_set,
+                &age_set,
+                &gender_set,
             );
             let dist = compute_dist(
                 &config.fields,
                 &metric,
-                &vectorized_target,
-                &vect_typ_click_trace,
+                &vect_target_click_trace,
+                &vect_typ_ref_click_trace,
             );
             tuples.push((OrderedFloat(dist), client.clone()));
         } else {
-            for sample_hist in sampled_click_traces.into_iter() {
-                let vectorized_ref = click_trace::vectorize_click_trace(
-                    &sample_hist,
-                    &website_set,
-                    &code_set,
-                    &location_set,
+            for click_trace in sampled_click_traces.into_iter() {
+                let vect_ref_click_trace = click_trace::vectorize_click_trace(
+                    &click_trace,
+                    &url_set,
+                    &domain_set,
                     &category_set,
+                    &age_set,
+                    &gender_set,
                 );
                 let dist =
-                    compute_dist(&config.fields, &metric, &vectorized_target, &vectorized_ref);
+                    compute_dist(&config.fields, &metric, &vect_target_click_trace, &vect_ref_click_trace);
                 tuples.push((OrderedFloat(dist), client.clone()));
             }
         }
@@ -145,7 +149,7 @@ fn eval_step(
     tuples.sort_unstable_by_key(|k| k.0);
     let cutoff: usize = (0.1 * client_to_freq_map.len() as f64) as usize;
     let is_top_10_percent = utils::is_target_in_top_k(client_target, &tuples[..cutoff]);
-    let is_top_10: bool = utils::is_target_in_top_k(client_target, &tuples[..1]);
+    let is_top_10: bool = utils::is_target_in_top_k(client_target, &tuples[..10]);
     (
         client_target.clone(),
         tuples[0].1,
@@ -181,17 +185,10 @@ where
     // Iterate over all data fields that are considered
     for field in fields.into_iter() {
         let (target_vector, ref_vector) = match field {
-            DataFields::Website => (
-                target_click_trace.website.clone(),
-                ref_click_trace.website.clone(),
-            ),
-            DataFields::Code => (
-                target_click_trace.code.clone(),
-                ref_click_trace.code.clone(),
-            ),
-            DataFields::Location => (
-                target_click_trace.location.clone(),
-                ref_click_trace.location.clone(),
+            DataFields::Url => (target_click_trace.url.clone(), ref_click_trace.url.clone()),
+            DataFields::Domain => (
+                target_click_trace.domain.clone(),
+                ref_click_trace.domain.clone(),
             ),
             DataFields::Category => (
                 target_click_trace.category.clone(),
@@ -202,6 +199,16 @@ where
                 target_click_trace.hour.clone(),
                 ref_click_trace.hour.clone(),
             ),
+            DataFields::Gender => (
+                target_click_trace.gender.clone(),
+                ref_click_trace.gender.clone(),
+            ),
+            DataFields::Age => (target_click_trace.age.clone(), ref_click_trace.age.clone()),
+            DataFields::ClickRate => (
+                target_click_trace.click_rate.clone(),
+                ref_click_trace.click_rate.clone(),
+            ),
+            _ => panic!("Error: unknown data field supplied: {}", field),
         };
 
         let dist = match metric {
@@ -230,19 +237,21 @@ pub fn get_unique_set(
     field: &DataFields,
 ) -> IndexSet<String> {
     let mut vector: Vec<String> = match field {
-        DataFields::Website => target_click_trace.website.keys().cloned().collect(),
-        DataFields::Code => target_click_trace.code.keys().cloned().collect(),
+        DataFields::Url => target_click_trace.url.keys().cloned().collect(),
+        DataFields::Domain => target_click_trace.domain.keys().cloned().collect(),
         DataFields::Category => target_click_trace.category.keys().cloned().collect(),
-        DataFields::Location => Vec::from([target_click_trace.location.clone()]),
+        DataFields::Age => Vec::from([target_click_trace.age.clone()]),
+        DataFields::Gender => Vec::from([target_click_trace.gender.clone()]),
         _ => panic!("Error: unknown data field supplied: {}", field),
     };
 
     for click_trace in sampled_click_traces.into_iter() {
         match field {
-            DataFields::Website => vector.extend(click_trace.website.keys().cloned()),
-            DataFields::Code => vector.extend(click_trace.code.keys().cloned()),
+            DataFields::Url => vector.extend(click_trace.url.keys().cloned()),
+            DataFields::Domain => vector.extend(click_trace.domain.keys().cloned()),
             DataFields::Category => vector.extend(click_trace.category.keys().cloned()),
-            DataFields::Location => vector.push(click_trace.location.clone()),
+            DataFields::Age => vector.push(click_trace.age.clone()),
+            DataFields::Gender => vector.push(click_trace.gender.clone()),
             _ => panic!("Error: unknown data field supplied: {}", field),
         }
     }
