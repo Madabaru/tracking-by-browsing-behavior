@@ -83,3 +83,5 @@ tmp/output
 tmp/output
 tmp/evaluation
 logs/custom-scanners-service.log.2021-12-13.0.gz
+logs/custom-scanners-service.log.2021-12-14.0.gz
+logs/custom-scanners-service.log.2021-12-15.0.gz

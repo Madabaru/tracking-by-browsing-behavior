@@ -3,14 +3,14 @@ use crate::frequency::maths;
 use num_traits::ToPrimitive;
 use nalgebra::EuclideanNorm;
 use nalgebra::LpNorm;
-use std::{collections::HashSet, f64::consts::E, str::FromStr};
+use std::{f64::consts::E, str::FromStr};
 
 #[derive(Debug)]
 pub enum DistanceMetric {
     Euclidean,
     Manhatten,
     Cosine,
-    Jaccard,
+    NonIntersection,
     Bhattacharyya,
     KullbrackLeibler,
     TotalVariation,
@@ -25,7 +25,7 @@ impl FromStr for DistanceMetric {
             "euclidean" => Ok(DistanceMetric::Euclidean),
             "manhatten" => Ok(DistanceMetric::Manhatten),
             "cosine" => Ok(DistanceMetric::Cosine),
-            "jaccard" => Ok(DistanceMetric::Jaccard),
+            "non_intersection" => Ok(DistanceMetric::NonIntersection),
             "bhattacharyya" => Ok(DistanceMetric::Bhattacharyya),
             "kullbrack_leibler" => Ok(DistanceMetric::KullbrackLeibler),
             "total_variation" => Ok(DistanceMetric::TotalVariation),
@@ -47,7 +47,7 @@ where
     dist
 }
 
-pub fn manhatten_dist<T, U>(target_vec: Vec<T>, ref_vec: Vec<U>) -> f64
+pub fn manhattan_dist<T, U>(target_vec: Vec<T>, ref_vec: Vec<U>) -> f64
 where
     T: Clone + std::cmp::PartialEq + std::fmt::Debug + ToPrimitive,
     U: Clone + std::cmp::PartialEq + std::fmt::Debug + ToPrimitive,
@@ -86,7 +86,7 @@ where
     -f64::log(dist, E)
 }
 
-pub fn kl_dist<T, U>(target_vec: Vec<T>, ref_vec: Vec<U>) -> f64
+pub fn kullbrack_leibler_dist<T, U>(target_vec: Vec<T>, ref_vec: Vec<U>) -> f64
 where
     T: Clone + std::cmp::PartialEq + std::fmt::Debug + ToPrimitive,
     U: Clone + std::cmp::PartialEq + std::fmt::Debug + ToPrimitive,
@@ -103,17 +103,18 @@ where
     -dist
 }
 
-pub fn total_var_dist<T, U>(target_vec: Vec<T>, ref_vec: Vec<U>) -> f64
+pub fn total_variation_dist<T, U>(target_vec: Vec<T>, ref_vec: Vec<U>) -> f64
 where
     T: Clone + std::cmp::PartialEq + std::fmt::Debug + ToPrimitive,
     U: Clone + std::cmp::PartialEq + std::fmt::Debug + ToPrimitive,
 {
     let target_matrix = maths::vec_to_matrix(target_vec, true);
     let ref_matrix = maths::vec_to_matrix(ref_vec, true);
-    let dist = target_matrix.zip_fold(&ref_matrix, 0.0, |acc, a, b| {
+    let sum = target_matrix.zip_fold(&ref_matrix, 0.0, |acc, a, b| {
         let diff = (a - b).abs();
-        f64::max(acc, diff)
+        acc + diff
     });
+    let dist: f64 = sum * 0.5;
     dist
 }
 
@@ -152,37 +153,18 @@ where
     dist
 }
 
-pub fn jaccard_dist<T, U>(target_vec: Vec<T>, ref_vec: Vec<U>) -> f64
+pub fn non_intersection_dist<T, U>(target_vec: Vec<T>, ref_vec: Vec<U>) -> f64
 where
-    T: Clone
-        + std::cmp::PartialEq
-        + std::fmt::Debug
-        + ToPrimitive
-        + std::cmp::PartialOrd
-        + num_traits::Zero,
-    U: Clone
-        + std::cmp::PartialEq
-        + std::fmt::Debug
-        + ToPrimitive
-        + std::cmp::PartialOrd
-        + num_traits::Zero,
+    T: Clone + std::cmp::PartialEq + std::fmt::Debug + ToPrimitive,
+    U: Clone + std::cmp::PartialEq + std::fmt::Debug + ToPrimitive,
 {
-    let non_zero_target: Vec<usize> = target_vec
-        .into_iter()
-        .enumerate()
-        .filter(|(_, v)| *v > num::zero())
-        .map(|(i, _)| i)
-        .collect();
-    let non_zero_ref: Vec<usize> = ref_vec
-        .into_iter()
-        .enumerate()
-        .filter(|(_, v)| *v > num::zero())
-        .map(|(i, _)| i)
-        .collect();
-    let target_set: HashSet<usize> = non_zero_target.into_iter().collect();
-    let ref_set: HashSet<usize> = non_zero_ref.into_iter().collect();
-    let inter = target_set.intersection(&ref_set).count() as f64;
-    let union = target_set.union(&ref_set).count() as f64;
-    let dist: f64 = inter / union;
-    1.0 - dist
+    let n = target_vec.len() as f64;
+    let target_matrix = maths::vec_to_matrix(target_vec, true);
+    let ref_matrix = maths::vec_to_matrix(ref_vec, true);
+    let sum = target_matrix.zip_fold(&ref_matrix, 0.0, |acc, a, b| {    
+        let min = f64::min(a, b);
+        acc + min
+    });
+    let dist: f64 = n - sum;
+    dist
 }

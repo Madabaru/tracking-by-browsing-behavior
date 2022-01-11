@@ -213,13 +213,12 @@ where
 
         let dist = match metric {
             DistanceMetric::Euclidean => metrics::euclidean_dist(target_vector, ref_vector),
-            DistanceMetric::Manhatten => metrics::manhatten_dist(target_vector, ref_vector),
+            DistanceMetric::Manhatten => metrics::manhattan_dist(target_vector, ref_vector),
             DistanceMetric::Cosine => metrics::consine_dist(target_vector, ref_vector),
-            DistanceMetric::Jaccard => metrics::jaccard_dist(target_vector, ref_vector),
-            // DistanceMetric::Jaccard => todo!(),
+            DistanceMetric::NonIntersection => metrics::non_intersection_dist(target_vector, ref_vector),
             DistanceMetric::Bhattacharyya => metrics::bhattacharyya_dist(target_vector, ref_vector),
-            DistanceMetric::KullbrackLeibler => metrics::kl_dist(target_vector, ref_vector),
-            DistanceMetric::TotalVariation => metrics::total_var_dist(target_vector, ref_vector),
+            DistanceMetric::KullbrackLeibler => metrics::kullbrack_leibler_dist(target_vector, ref_vector),
+            DistanceMetric::TotalVariation => metrics::total_variation_dist(target_vector, ref_vector),
             DistanceMetric::JeffriesMatusita => metrics::jeffries_dist(target_vector, ref_vector),
             DistanceMetric::ChiSquared => metrics::chi_squared_dist(target_vector, ref_vector),
         };
