@@ -8,7 +8,7 @@ use std::{f64::consts::E, str::FromStr};
 #[derive(Debug)]
 pub enum DistanceMetric {
     Euclidean,
-    Manhatten,
+    Manhattan,
     Cosine,
     NonIntersection,
     Bhattacharyya,
@@ -23,7 +23,7 @@ impl FromStr for DistanceMetric {
     fn from_str(s: &str) -> Result<DistanceMetric, Self::Err> {
         match s {
             "euclidean" => Ok(DistanceMetric::Euclidean),
-            "manhatten" => Ok(DistanceMetric::Manhatten),
+            "manhattan" => Ok(DistanceMetric::Manhattan),
             "cosine" => Ok(DistanceMetric::Cosine),
             "non_intersection" => Ok(DistanceMetric::NonIntersection),
             "bhattacharyya" => Ok(DistanceMetric::Bhattacharyya),

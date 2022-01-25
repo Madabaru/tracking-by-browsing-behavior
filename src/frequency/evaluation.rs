@@ -212,7 +212,7 @@ where
 
         let dist = match metric {
             DistanceMetric::Euclidean => metrics::euclidean_dist(target_vector, ref_vector),
-            DistanceMetric::Manhatten => metrics::manhattan_dist(target_vector, ref_vector),
+            DistanceMetric::Manhattan => metrics::manhattan_dist(target_vector, ref_vector),
             DistanceMetric::Cosine => metrics::consine_dist(target_vector, ref_vector),
             DistanceMetric::NonIntersection => metrics::non_intersection_dist(target_vector, ref_vector),
             DistanceMetric::Bhattacharyya => metrics::bhattacharyya_dist(target_vector, ref_vector),
