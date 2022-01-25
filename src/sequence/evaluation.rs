@@ -17,7 +17,7 @@ pub fn eval(
     client_to_target_idx_map: &HashMap<u32, usize>,
     client_to_sample_idx_map: &HashMap<u32, Vec<usize>>,
 ) {
-    let result_list: Vec<(u32, u32, bool, bool)> = client_to_target_idx_map
+    let result_list: Vec<(bool, bool, bool)> = client_to_target_idx_map
         .par_iter()
         .map(|(client, target_idx)| {
             eval_step(
@@ -30,12 +30,12 @@ pub fn eval(
         })
         .collect();
 
-    let mut correct_pred = 0;
+    let mut top_1_count = 0;
     let mut top_10_count = 0;
     let mut top_10_percent_count = 0;
-    for (pred, target, in_top_10, in_top_10_percent) in result_list.iter() {
-        if pred == target {
-            correct_pred += 1
+    for (in_top_1, in_top_10, in_top_10_percent) in result_list.iter() {
+        if *in_top_1 {
+            top_1_count += 1
         }
         if *in_top_10 {
             top_10_count += 1;
@@ -45,17 +45,15 @@ pub fn eval(
         }
     }
 
-    let accuracy: f64 = correct_pred as f64 / result_list.len() as f64;
-    log::info!("Rank 1: {:?}", accuracy);
+    let top_1: f64 = top_1_count as f64 / result_list.len() as f64;
+    log::info!("Rank 1: {:?}", top_1);
     let top_10: f64 = top_10_count as f64 / result_list.len() as f64;
     log::info!("Top 10: {:?}", top_10);
     let top_10_percent: f64 = top_10_percent_count as f64 / result_list.len() as f64;
     log::info!("Top 10 Percent: {:?}", top_10_percent);
 
-    // Write result to output file for further processing in python
-    utils::write_to_output(result_list);
     // Write metrics to final evaluation file
-    utils::write_to_eval(config, top_10, top_10_percent);
+    utils::write_to_eval(config, top_1, top_10, top_10_percent);
 }
 
 fn eval_step(
@@ -64,7 +62,7 @@ fn eval_step(
     target_idx: &usize,
     client_to_seq_map: &BTreeMap<u32, Vec<SeqClickTrace>>,
     client_to_sample_idx_map: &HashMap<u32, Vec<usize>>,
-) -> (u32, u32, bool, bool) {
+) -> (bool, bool, bool) {
     let target_click_trace = client_to_seq_map
         .get(client_target)
         .unwrap()
@@ -112,9 +110,9 @@ fn eval_step(
     let cutoff: usize = (0.1 * client_to_seq_map.len() as f64) as usize;
     let is_top_10_percent = utils::is_target_in_top_k(client_target, &tuples[..cutoff]);
     let is_top_10: bool = utils::is_target_in_top_k(client_target, &tuples[..10]);
+    let is_top_1 = client_target.clone() == tuples[0].1;
     (
-        client_target.clone(),
-        tuples[0].1,
+        is_top_1,
         is_top_10,
         is_top_10_percent,
     )

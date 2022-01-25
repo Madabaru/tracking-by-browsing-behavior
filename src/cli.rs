@@ -32,7 +32,7 @@ pub fn get_cli_config() -> Result<Config, clap::Error> {
                 .long("approach")
                 .about("Sequence alignment-based or frequency-based approach.")
                 .possible_values(&["sequence", "frequency"])
-                .default_value("frequency"),
+                .default_value("sequence"),
         )
         .arg(
             clap::Arg::new("scoring_matrix")
@@ -67,7 +67,7 @@ pub fn get_cli_config() -> Result<Config, clap::Error> {
                 .possible_values(&["url", "category", "domain", "hour", "day", "age", "gender", "click_rate"])
                 .about("Data fields to consider for the analysis.")
                 .multiple_values(true)
-                .default_values(&["url", "category", "domain", "age", "gender"])
+                .default_values(&["category", "domain", "age", "gender", "url"])
         )
         .arg(
             clap::Arg::new("max_click_trace_len")
@@ -114,14 +114,14 @@ pub fn get_cli_config() -> Result<Config, clap::Error> {
         .arg(
             clap::Arg::new("metric")
                 .long("metric")
-                .default_value("euclidean")
+                .default_value("kullbrack_leibler")
                 .about("Distance metric to compare a pair of click traces.")
-                .possible_values(&["euclidean", "manhatten", "cosine", "jaccard", "bhattacharyya", "kullbrack_leibler", "total_variation", "jeffries_matusita", "chi_quared"]),
+                .possible_values(&["euclidean", "manhatten", "cosine", "non_intersection", "bhattacharyya", "kullbrack_leibler", "total_variation", "jeffries_matusita", "chi_quared"]),
         )
         .arg(
             clap::Arg::new("path")
                 .long("path")
-                .default_value("data/browsing.csv")
+                .default_value("data/test.csv")
                 .about("Path to the dataset.")
         )
         .arg(
@@ -133,7 +133,7 @@ pub fn get_cli_config() -> Result<Config, clap::Error> {
         .arg(
             clap::Arg::new("typical")
                 .long("typical")
-                .default_value("true")
+                .default_value("false")
                 .about("Set to true if you want to compute a typical click trace (session) per client.")
         )
         .get_matches();

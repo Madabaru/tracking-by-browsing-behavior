@@ -5,8 +5,9 @@ use ordered_float::OrderedFloat;
 use std::io::{prelude::*, BufWriter};
 use std::collections::HashMap;
 
-const OUTPUT_PATH: &str = "tmp/output";
+// const OUTPUT_PATH: &str = "tmp/output";
 const EVAL_PATH: &str = "tmp/evaluation";
+// const THRESHOLD: f64 = 20.0;
 
 pub fn normalize_vector(vector: &mut [f64]) {
     let norm = vector.iter().map(|x| *x * *x).sum::<f64>().sqrt();
@@ -47,6 +48,28 @@ pub fn is_target_in_top_k(client_target: &u32, tuples: &[(OrderedFloat<f64>, u32
     tuples.iter().any(|(_, b)| b == client_target)
 }
 
+// pub fn gen_pred_and_label_vec(client_target: &u32, tuples: &[(OrderedFloat<f64>, u32)]) -> (Vec<u32>, Vec<u32>){
+//     let mut preds: Vec<u32> = vec![0; tuples.len()];
+//     let mut labels: Vec<u32> = vec![0; tuples.len()];
+//     let mut pred: u32 = 0;
+//     let mut label: u32 = 0;
+//     for (i, x) in tuples.iter().enumerate() {
+//         if x.0.into_inner() < THRESHOLD {
+//             pred = 1;
+//         } else {
+//             pred = 0;
+//         }
+//         if x.1 == *client_target {
+//             label = 1;
+//         } else {
+//             label = 0;
+//         }
+//         preds[i] = pred;
+//         labels[i] = label;
+//     }
+//     (preds, labels)
+// }
+
 pub fn get_most_freq_element<T>(vector: &[T]) -> T
 where
     T: std::cmp::Eq + std::hash::Hash + Copy,
@@ -60,15 +83,15 @@ where
     most_repeated_ele
 }
 
-pub fn write_to_output(tuple_list: Vec<(u32, u32, bool, bool)>) {
-    let file = std::fs::File::create(OUTPUT_PATH).unwrap();
-    let mut writer = BufWriter::new(&file);
-    for i in tuple_list {
-        write!(writer, "{},{} \n", i.0, i.1).expect("Unable to write to output file.");
-    }
-}
+// pub fn write_to_output(tuple_list: Vec<(u32, u32, bool, bool)>) {
+//     let file = std::fs::File::create(OUTPUT_PATH).unwrap();
+//     let mut writer = BufWriter::new(&file);
+//     for i in tuple_list {
+//         write!(writer, "{},{} \n", i.0, i.1).expect("Unable to write to output file.");
+//     }
+// }
 
-pub fn write_to_eval(config: &Config, top_10: f64, top_10_percent: f64) {
+pub fn write_to_eval(config: &Config, top_1: f64, top_10: f64, top_10_percent: f64) {
     let mut file = std::fs::OpenOptions::new()
         .create(true)
         .append(true)
@@ -76,8 +99,8 @@ pub fn write_to_eval(config: &Config, top_10: f64, top_10_percent: f64) {
         .unwrap();
     write!(
         file,
-        "--------------\nExperiment: {:?}\nTop 10: {}\nTop 10 Percent: {}\n",
-        config, top_10, top_10_percent
+        "--------------\nExperiment: {:?}\nTop 1: {}\nTop 10: {}\nTop 10 Percent: {}\n",
+        config, top_1, top_10, top_10_percent
     )
     .expect("Unable to write to evaluation file.");
 }
