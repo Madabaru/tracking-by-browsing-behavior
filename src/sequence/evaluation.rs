@@ -53,7 +53,7 @@ pub fn eval(
     log::info!("Top 10 Percent: {:?}", top_10_percent);
 
     // Write metrics to final evaluation file
-    utils::write_to_eval(config, top_1, top_10, top_10_percent);
+    utils::write_to_file(config, top_1, top_10, top_10_percent);
 }
 
 fn eval_step(

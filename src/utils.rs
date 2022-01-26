@@ -2,8 +2,12 @@ use crate::cli::Config;
 
 use indexmap::set::IndexSet;
 use ordered_float::OrderedFloat;
-use std::io::{prelude::*, BufWriter};
-use std::collections::HashMap;
+use serde::Serialize;
+use std::{
+    collections::HashMap,
+    error::Error
+};
+use csv::{WriterBuilder};
 
 // const OUTPUT_PATH: &str = "tmp/output";
 const EVAL_PATH: &str = "tmp/evaluation";
@@ -83,24 +87,66 @@ where
     most_repeated_ele
 }
 
-// pub fn write_to_output(tuple_list: Vec<(u32, u32, bool, bool)>) {
-//     let file = std::fs::File::create(OUTPUT_PATH).unwrap();
-//     let mut writer = BufWriter::new(&file);
-//     for i in tuple_list {
-//         write!(writer, "{},{} \n", i.0, i.1).expect("Unable to write to output file.");
-//     }
-// }
-
-pub fn write_to_eval(config: &Config, top_1: f64, top_10: f64, top_10_percent: f64) {
-    let mut file = std::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(EVAL_PATH)
-        .unwrap();
-    write!(
-        file,
-        "--------------\nExperiment: {:?}\nTop 1: {}\nTop 10: {}\nTop 10 Percent: {}\n",
-        config, top_1, top_10, top_10_percent
-    )
-    .expect("Unable to write to evaluation file.");
+#[derive(Serialize)]
+struct Row {
+    delay_limit: f64,
+    fields: String,
+    max_click_trace_len: usize,
+    min_click_trace_len: usize,
+    max_click_trace_duration: f64,
+    max_click_rate: f64,
+    min_num_click_traces: usize,
+    client_sample_size: usize,
+    click_trace_sample_size: usize,
+    metric: String,
+    path: String,
+    seed: u64,
+    typical: bool,
+    strategy: String,
+    scoring_matrix: String,
+    approach: String,
+    scope: String,
+    top_1: f64,
+    top_10: f64,
+    top_10_percent: f64
 }
+
+
+pub fn write_to_file(config: &Config, top_1: f64, top_10: f64, top_10_percent: f64) -> Result<(), Box<Error>> {
+    let mut file = std::fs::OpenOptions::new()
+    .write(true)
+    .create(true)
+    .append(true)
+    .open(EVAL_PATH)
+    .unwrap();
+
+    let mut wtr = WriterBuilder::new()
+        .delimiter(b',')
+        .has_headers(false)
+        .from_writer(file);
+        
+    wtr.serialize(Row {
+        delay_limit: config.delay_limit,
+        fields: format!("{:?}", &config.fields), // config.fields.iter().map(|x| DataFields::to_string(x)).collect(),
+        max_click_trace_len: config.max_click_trace_len,
+        min_click_trace_len: config.min_click_trace_len,
+        max_click_trace_duration: config.max_click_trace_duration,
+        max_click_rate: config.max_click_rate,
+        min_num_click_traces: config.min_num_click_traces,
+        client_sample_size: config.client_sample_size,
+        click_trace_sample_size: config.click_trace_sample_size,
+        metric: config.metric.to_string(),
+        path: config.path.to_string(),
+        seed: config.seed,
+        typical: config.typical,
+        strategy: config.strategy.to_string(),
+        scoring_matrix: format!("{:?}", &config.scoring_matrix),  // String::from_utf8_lossy(&config.scoring_matrix),
+        approach: config.approach.to_string(),
+        scope: config.scope.to_string(),
+        top_1: top_1,
+        top_10: top_10,
+        top_10_percent: top_10_percent
+    })?;
+    Ok(())
+}
+

@@ -59,7 +59,7 @@ pub fn eval(
     log::info!("Top 10 Percent: {:?}", top_10_percent);
     
     // Write metrics to final evaluation file
-    utils::write_to_eval(config, top_1, top_10, top_10_percent);
+    utils::write_to_file(config, top_1, top_10, top_10_percent);
 }
 
 fn eval_step(
@@ -147,7 +147,7 @@ fn eval_step(
     tuples.sort_unstable_by_key(|k| k.0);
     let cutoff: usize = (0.1 * client_to_freq_map.len() as f64) as usize;
     let is_top_10_percent = utils::is_target_in_top_k(client_target, &tuples[..cutoff]);
-    let is_top_10: bool = utils::is_target_in_top_k(client_target, &tuples[..10]);
+    let is_top_10: bool = utils::is_target_in_top_k(client_target, &tuples[..1]);
     let is_top_1: bool = client_target.clone() == tuples[0].1;
     // let tuple_preds_and_labels = utils::gen_pred_and_label_vec(client_target, &tuples);
     (
