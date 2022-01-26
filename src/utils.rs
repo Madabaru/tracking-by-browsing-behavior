@@ -1,13 +1,10 @@
 use crate::cli::Config;
 
+use csv::WriterBuilder;
 use indexmap::set::IndexSet;
 use ordered_float::OrderedFloat;
 use serde::Serialize;
-use std::{
-    collections::HashMap,
-    error::Error
-};
-use csv::{WriterBuilder};
+use std::{collections::HashMap, error::Error};
 
 // const OUTPUT_PATH: &str = "tmp/output";
 const EVAL_PATH: &str = "tmp/evaluation";
@@ -108,23 +105,27 @@ struct Row {
     scope: String,
     top_1: f64,
     top_10: f64,
-    top_10_percent: f64
+    top_10_percent: f64,
 }
 
-
-pub fn write_to_file(config: &Config, top_1: f64, top_10: f64, top_10_percent: f64) -> Result<(), Box<Error>> {
+pub fn write_to_file(
+    config: &Config,
+    top_1: f64,
+    top_10: f64,
+    top_10_percent: f64,
+) -> Result<(), Box<Error>> {
     let mut file = std::fs::OpenOptions::new()
-    .write(true)
-    .create(true)
-    .append(true)
-    .open(EVAL_PATH)
-    .unwrap();
+        .write(true)
+        .create(true)
+        .append(true)
+        .open(EVAL_PATH)
+        .unwrap();
 
     let mut wtr = WriterBuilder::new()
         .delimiter(b',')
         .has_headers(false)
         .from_writer(file);
-        
+
     wtr.serialize(Row {
         delay_limit: config.delay_limit,
         fields: format!("{:?}", &config.fields), // config.fields.iter().map(|x| DataFields::to_string(x)).collect(),
@@ -140,13 +141,12 @@ pub fn write_to_file(config: &Config, top_1: f64, top_10: f64, top_10_percent: f
         seed: config.seed,
         typical: config.typical,
         strategy: config.strategy.to_string(),
-        scoring_matrix: format!("{:?}", &config.scoring_matrix),  // String::from_utf8_lossy(&config.scoring_matrix),
+        scoring_matrix: format!("{:?}", &config.scoring_matrix), // String::from_utf8_lossy(&config.scoring_matrix),
         approach: config.approach.to_string(),
         scope: config.scope.to_string(),
         top_1: top_1,
         top_10: top_10,
-        top_10_percent: top_10_percent
+        top_10_percent: top_10_percent,
     })?;
     Ok(())
 }
-
