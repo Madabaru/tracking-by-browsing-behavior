@@ -79,6 +79,13 @@ pub fn parse_to_frequency(
         let record: Record = result?;
 
         if prev_user != record.user_id && !prev_user.is_empty() {
+            // Check last mobility trace added to previous client
+            let prev_click_traces_list = client_to_freq_map.get_mut(&client_id).unwrap();
+            if !prev_click_traces_list.is_empty() {
+                if click_trace_len < config.min_click_trace_len {
+                    prev_click_traces_list.pop();
+                }
+            }
             user_id += 1;
         }
 
@@ -163,6 +170,11 @@ pub fn parse_to_frequency(
         "Number of clients after filtering: {:?}",
         client_to_freq_map.keys().len()
     );
+    let total_num_click_traces: usize = client_to_freq_map.iter().map(|(_, val)| val.len()).sum();
+    log::info!(
+        "Total number of mobility traces: {:?}",
+        total_num_click_traces
+    );
     Ok(client_to_freq_map)
 }
 
@@ -185,6 +197,13 @@ pub fn parse_to_sequence(
         let record: Record = result?;
 
         if prev_user != record.user_id && !prev_user.is_empty() {
+            // Check last mobility trace added to previous client
+            let prev_click_traces_list = user_to_seq_map.get_mut(&client_id).unwrap();
+            if !prev_click_traces_list.is_empty() {
+                if click_trace_len < config.min_click_trace_len {
+                    prev_click_traces_list.pop();
+                }
+            }
             user_id += 1;
         }
 
@@ -265,6 +284,11 @@ pub fn parse_to_sequence(
     log::info!(
         "Number of clients after filtering: {:?}",
         user_to_seq_map.keys().len()
+    );
+    let total_num_click_traces: usize = user_to_seq_map.iter().map(|(_, val)| val.len()).sum();
+    log::info!(
+        "Total number of mobility traces: {:?}",
+        total_num_click_traces
     );
     Ok(user_to_seq_map)
 }
