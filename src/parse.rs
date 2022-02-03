@@ -80,7 +80,7 @@ pub fn parse_to_frequency(
 
         if prev_user != record.user_id && !prev_user.is_empty() {
             // Check last mobility trace added to previous client
-            let prev_click_traces_list = client_to_freq_map.get_mut(&client_id).unwrap();
+            let prev_click_traces_list = client_to_freq_map.get_mut(&user_id).unwrap();
             if !prev_click_traces_list.is_empty() {
                 if click_trace_len < config.min_click_trace_len {
                     prev_click_traces_list.pop();
@@ -198,7 +198,7 @@ pub fn parse_to_sequence(
 
         if prev_user != record.user_id && !prev_user.is_empty() {
             // Check last mobility trace added to previous client
-            let prev_click_traces_list = user_to_seq_map.get_mut(&client_id).unwrap();
+            let prev_click_traces_list = user_to_seq_map.get_mut(&user_id).unwrap();
             if !prev_click_traces_list.is_empty() {
                 if click_trace_len < config.min_click_trace_len {
                     prev_click_traces_list.pop();
