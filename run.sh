@@ -118,3 +118,33 @@ cargo build --release && ./target/release/tracking-by-browsing-behavior  --field
 cargo build --release && ./target/release/tracking-by-browsing-behavior  --fields url category domain age gender --approach sequence
 cargo build --release && ./target/release/tracking-by-browsing-behavior  --fields url category domain gender --approach sequence
 cargo build --release && ./target/release/tracking-by-browsing-behavior  --fields url category domain gender age hour day --approach sequence
+
+cargo build --release && ./target/release/tracking-by-browsing-behavior  --approach sequence --strategy nw --scope local --scoring_matrix 1 -1 0 0
+cargo build --release && ./target/release/tracking-by-browsing-behavior  --approach sequence --strategy sw --scope local --scoring_matrix 1 -1 0 0
+cargo build --release && ./target/release/tracking-by-browsing-behavior  --approach sequence --strategy nw --scope global --scoring_matrix 1 -1 0 0
+cargo build --release && ./target/release/tracking-by-browsing-behavior  --approach sequence --strategy sw --scope global --scoring_matrix 1 -1 0 0
+
+cargo build --release && ./target/release/tracking-by-browsing-behavior  --approach sequence --strategy nw --scope local --scoring_matrix 1 -1 -1 -1
+cargo build --release && ./target/release/tracking-by-browsing-behavior  --approach sequence --strategy sw --scope local --scoring_matrix 1 -1 -1 -1
+cargo build --release && ./target/release/tracking-by-browsing-behavior  --approach sequence --strategy nw --scope global --scoring_matrix 1 -1 -1 -1
+cargo build --release && ./target/release/tracking-by-browsing-behavior  --approach sequence --strategy sw --scope global --scoring_matrix 1 -1 -1 -1
+
+cargo build --release && ./target/release/tracking-by-browsing-behavior  --approach sequence --strategy nw --scope local --scoring_matrix 1 -2 -1 -1
+cargo build --release && ./target/release/tracking-by-browsing-behavior  --approach sequence --strategy sw --scope local --scoring_matrix 1 -2 -1 -1
+cargo build --release && ./target/release/tracking-by-browsing-behavior  --approach sequence --strategy nw --scope global --scoring_matrix 1 -2 -1 -1
+cargo build --release && ./target/release/tracking-by-browsing-behavior  --approach sequence --strategy sw --scope global --scoring_matrix 1 -2 -1 -1
+
+cargo build --release && ./target/release/tracking-by-browsing-behavior  --approach sequence --strategy nw --scope local --scoring_matrix 1 -1 -2 -2
+cargo build --release && ./target/release/tracking-by-browsing-behavior  --approach sequence --strategy sw --scope local --scoring_matrix 1 -1 -2 -2
+cargo build --release && ./target/release/tracking-by-browsing-behavior  --approach sequence --strategy nw --scope global --scoring_matrix 1 -1 -2 -2
+cargo build --release && ./target/release/tracking-by-browsing-behavior  --approach sequence --strategy sw --scope global --scoring_matrix 1 -1 -2 -2
+
+cargo build --release && ./target/release/tracking-by-browsing-behavior  --approach sequence --strategy nw --scope local --scoring_matrix 1 -2 -2 -2
+cargo build --release && ./target/release/tracking-by-browsing-behavior  --approach sequence --strategy sw --scope local --scoring_matrix 1 -2 -2 -2
+cargo build --release && ./target/release/tracking-by-browsing-behavior  --approach sequence --strategy nw --scope global --scoring_matrix 1 -2 -2 -2
+cargo build --release && ./target/release/tracking-by-browsing-behavior  --approach sequence --strategy sw --scope global --scoring_matrix 1 -2 -2 -2
+
+cargo build --release && ./target/release/tracking-by-browsing-behavior  --approach sequence --strategy nw --scope local --scoring_matrix 2 -1 -1 -1
+cargo build --release && ./target/release/tracking-by-browsing-behavior  --approach sequence --strategy sw --scope local --scoring_matrix 2 -1 -1 -1
+cargo build --release && ./target/release/tracking-by-browsing-behavior  --approach sequence --strategy nw --scope global --scoring_matrix 2 -1 -1 -1
+cargo build --release && ./target/release/tracking-by-browsing-behavior  --approach sequence --strategy sw --scope global --scoring_matrix 2 -1 -1 -1
