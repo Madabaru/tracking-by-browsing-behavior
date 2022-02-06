@@ -30,7 +30,7 @@ pub fn get_cli_config() -> Result<Config, clap::Error> {
         .arg(
             clap::Arg::new("approach")
                 .long("approach")
-                .about("Sequence alignment-based or frequency-based approach.")
+                .help("Sequence alignment-based or frequency-based approach.")
                 .possible_values(&["sequence", "frequency"])
                 .default_value("frequency"),
         )
@@ -38,35 +38,35 @@ pub fn get_cli_config() -> Result<Config, clap::Error> {
             clap::Arg::new("scoring_matrix")
                 .long("scoring_matrix")
                 .allow_hyphen_values(true)
-                .about("The scoring matrix to use for the alignment approach: ['equal', 'align', 'insert', 'delete'].")
+                .help("The scoring matrix to use for the alignment approach: ['equal', 'align', 'insert', 'delete'].")
                 .multiple_values(true)
                 .default_values(&["1", "-1", "0", "0"])
         )
         .arg(
             clap::Arg::new("scope")
                 .long("scope")
-                .about("The scope of the alignment algorithm: local or global.")
+                .help("The scope of the alignment algorithm: local or global.")
                 .possible_values(&["local", "global"])
                 .default_value("global"),
         )
         .arg(
             clap::Arg::new("strategy")
                 .long("strategy")
-                .about("The alignment strategy to use.")
+                .help("The alignment strategy to use.")
                 .possible_values(&["sw", "nw"])
                 .default_value("nw"),
         )
         .arg(
             clap::Arg::new("delay_limit")
                 .long("delay_limit")
-                .about("Maximum delay between two consecutive clicks.")
+                .help("Maximum delay between two consecutive clicks.")
                 .default_value("1800.0"),
         )
         .arg(
             clap::Arg::new("fields")
                 .long("fields")
                 .possible_values(&["url", "category", "domain", "hour", "day", "age", "gender", "click_rate"])
-                .about("Data fields to consider for the analysis.")
+                .help("Data fields to consider for the analysis.")
                 .multiple_values(true)
                 .default_values(&["category", "domain", "age", "gender", "url"])
         )
@@ -74,68 +74,68 @@ pub fn get_cli_config() -> Result<Config, clap::Error> {
             clap::Arg::new("max_click_trace_len")
                 .long("max_click_trace_len")
                 .default_value("1000")
-                .about("Maximum length of a single click trace."),
+                .help("Maximum length of a single click trace."),
         )
         .arg(
             clap::Arg::new("min_click_trace_len")
                 .long("min_click_trace_len")
                 .default_value("10")
-                .about("Minimum length of a single click trace."),
+                .help("Minimum length of a single click trace."),
         )
         .arg(
             clap::Arg::new("max_click_trace_duration")
                 .long("max_click_trace_duration")
                 .default_value("86400.0")
-                .about("Maximum duration of a single click trace."),
+                .help("Maximum duration of a single click trace."),
         )
         .arg(
             clap::Arg::new("min_num_click_traces")
                 .long("min_num_click_traces")
                 .default_value("4")
-                .about("Minimum number of click traces per client."),
+                .help("Minimum number of click traces per client."),
         )
         .arg(
             clap::Arg::new("max_click_rate")
                 .long("max_click_rate")
                 .default_value("2.0")
-                .about("Maximum allowed click rate (number of clicks / time)."),
+                .help("Maximum allowed click rate (number of clicks / time)."),
         )
         .arg(
             clap::Arg::new("client_sample_size")
                 .long("client_sample_size")
                 .default_value("400")
-                .about("Number of clients to sample."),
+                .help("Number of clients to sample."),
         )
         .arg(
             clap::Arg::new("click_trace_sample_size")
                 .long("click_trace_sample_size")
                 .default_value("20")
-                .about("Number of click traces to sample per client"),
+                .help("Number of click traces to sample per client"),
         )
         .arg(
             clap::Arg::new("metric")
                 .long("metric")
                 .default_value("kullbrack_leibler")
-                .about("Distance metric to compare a pair of click traces.")
+                .help("Distance metric to compare a pair of click traces.")
                 .possible_values(&["euclidean", "manhattan", "cosine", "non_intersection", "bhattacharyya", "kullbrack_leibler", "total_variation", "jeffries_matusita", "chi_quared"]),
         )
         .arg(
             clap::Arg::new("path")
                 .long("path")
                 .default_value("data/browsing.csv")
-                .about("Path to the dataset.")
+                .help("Path to the dataset.")
         )
         .arg(
             clap::Arg::new("seed")
                 .long("seed")
                 .default_value("0")
-                .about("Random seed for reproducability.")
+                .help("Random seed for reproducability.")
         )
         .arg(
             clap::Arg::new("typical")
                 .long("typical")
                 .default_value("false")
-                .about("Set to true if you want to compute a typical click trace (session) per client.")
+                .help("Set to true if you want to compute a typical click trace (session) per client.")
         )
         .get_matches();
 
