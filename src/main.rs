@@ -7,6 +7,7 @@ mod utils;
 
 use frequency::click_trace::FreqClickTrace;
 use sequence::click_trace::SeqClickTrace;
+use simple_logger::SimpleLogger;
 
 use rand::{rngs::StdRng, SeedableRng};
 use std::collections::{BTreeMap, HashMap};
@@ -16,7 +17,11 @@ fn main() {
     let config = cli::get_cli_config().unwrap();
 
     // Set up logger
-    simple_logger::init_with_level(log::Level::Info).unwrap();
+    SimpleLogger::new()
+        .with_level(log::LevelFilter::Info)
+        .with_utc_timestamps()
+        .init()
+        .unwrap();
 
     // Set random seed for reproducability
     let mut rng = StdRng::seed_from_u64(config.seed);
