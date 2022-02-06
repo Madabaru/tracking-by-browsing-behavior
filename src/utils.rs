@@ -143,7 +143,7 @@ pub fn write_to_file(
 
     let mut wtr = WriterBuilder::new()
         .delimiter(b',')
-        .has_headers(true)
+        .has_headers(false)
         .from_writer(file);
 
     wtr.serialize(Row {
