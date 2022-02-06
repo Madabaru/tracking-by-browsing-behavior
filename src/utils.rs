@@ -6,9 +6,7 @@ use ordered_float::OrderedFloat;
 use serde::Serialize;
 use std::{collections::HashMap, error::Error};
 
-// const OUTPUT_PATH: &str = "tmp/output";
 const EVAL_PATH: &str = "tmp/evaluation";
-// const THRESHOLD: f64 = 20.0;
 
 pub fn normalize_vector(vector: &mut [f64]) {
     let norm = vector.iter().map(|x| *x * *x).sum::<f64>().sqrt();
@@ -49,28 +47,10 @@ pub fn is_target_in_top_k(client_target: &u32, tuples: &[(OrderedFloat<f64>, u32
     tuples.iter().any(|(_, b)| b == client_target)
 }
 
-// pub fn gen_pred_and_label_vec(client_target: &u32, tuples: &[(OrderedFloat<f64>, u32)]) -> (Vec<u32>, Vec<u32>){
-//     let mut preds: Vec<u32> = vec![0; tuples.len()];
-//     let mut labels: Vec<u32> = vec![0; tuples.len()];
-//     let mut pred: u32 = 0;
-//     let mut label: u32 = 0;
-//     for (i, x) in tuples.iter().enumerate() {
-//         if x.0.into_inner() < THRESHOLD {
-//             pred = 1;
-//         } else {
-//             pred = 0;
-//         }
-//         if x.1 == *client_target {
-//             label = 1;
-//         } else {
-//             label = 0;
-//         }
-//         preds[i] = pred;
-//         labels[i] = label;
-//     }
-//     (preds, labels)
-// }
-
+// Returns the most frequent element in a given vector of values.
+//
+// Returns the most frequent element in a given vector of values. 
+// The values can be of arbitrary value.
 pub fn get_most_freq_element<T>(vector: &[T]) -> T
 where
     T: std::cmp::Eq + std::hash::Hash + Copy,
@@ -80,9 +60,43 @@ where
         *map.entry(e).or_insert(0) += 1;
     }
     let option = map.into_iter().max_by_key(|(_, v)| *v).map(|(k, _)| k);
-    let most_repeated_ele = *option.unwrap();
-    most_repeated_ele
+    let most_frequent_ele = *option.unwrap();
+    most_frequent_ele
 }
+
+// Calculates the mean for a vector of values.
+pub fn mean(data: &[f64]) -> f64 {
+    let sum = data.iter().sum::<f64>();
+    let count = data.len();
+    let mean = sum / count as f64;
+    mean
+}
+
+// Calculates the standard deviation for a vector of values.
+pub fn std_deviation(data: &[f64]) -> f64 {
+    let data_mean = mean(data);
+    let count = data.len();
+    let variance = data.iter().map(|value| {
+        let diff = data_mean - (*value as f64);
+        diff * diff
+    }).sum::<f64>() / count as f64;
+    variance.sqrt()
+}
+
+// Calculates the confidence interval.
+// 
+// Calculates and returns the confidence interval in form of a tuple with lower and
+// upper bound for a mean estimate.
+// The default confidence level is 0.95 using a z-value= 1.96.
+// pub fn get_confidence_interval(data: &[f64]) -> (f64, f64) {
+//     let sample_size = data.len() as f64;
+//     let mean = mean(data);
+//     let std = std_deviation(data);
+//     let lower_bound = mean - 1.96 * (std / f64::sqrt(sample_size));
+//     let upper_bound = mean - 1.96 * (std / f64::sqrt(sample_size));
+//     (lower_bound, upper_bound)
+// }
+
 
 #[derive(Serialize)]
 struct Row {
@@ -104,17 +118,23 @@ struct Row {
     approach: String,
     scope: String,
     top_1: f64,
+    top_1_std: f64,
     top_10: f64,
+    top_10_std: f64,
     top_10_percent: f64,
+    top_10_percent_std: f64,
 }
 
 pub fn write_to_file(
     config: &Config,
     top_1: f64,
+    top_1_std: f64,
     top_10: f64,
+    top_10_std: f64,
     top_10_percent: f64,
-) -> Result<(), Box<Error>> {
-    let mut file = std::fs::OpenOptions::new()
+    top_10_percent_std: f64,
+) -> Result<(), Box<dyn Error>> {
+    let file = std::fs::OpenOptions::new()
         .write(true)
         .create(true)
         .append(true)
@@ -123,30 +143,33 @@ pub fn write_to_file(
 
     let mut wtr = WriterBuilder::new()
         .delimiter(b',')
-        .has_headers(false)
+        .has_headers(true)
         .from_writer(file);
 
     wtr.serialize(Row {
         delay_limit: config.delay_limit,
-        fields: format!("{:?}", &config.fields), // config.fields.iter().map(|x| DataFields::to_string(x)).collect(),
         max_click_trace_len: config.max_click_trace_len,
         min_click_trace_len: config.min_click_trace_len,
         max_click_trace_duration: config.max_click_trace_duration,
         max_click_rate: config.max_click_rate,
         min_num_click_traces: config.min_num_click_traces,
-        client_sample_size: config.client_sample_size,
-        click_trace_sample_size: config.click_trace_sample_size,
-        metric: config.metric.to_string(),
         path: config.path.to_string(),
         seed: config.seed,
-        typical: config.typical,
-        strategy: config.strategy.to_string(),
-        scoring_matrix: format!("{:?}", &config.scoring_matrix), // String::from_utf8_lossy(&config.scoring_matrix),
         approach: config.approach.to_string(),
+        client_sample_size: config.client_sample_size,
+        click_trace_sample_size: config.click_trace_sample_size,
+        fields: format!("{:?}", &config.fields), 
+        typical: config.typical,
+        metric: config.metric.to_string(),
+        strategy: config.strategy.to_string(),
+        scoring_matrix: format!("{:?}", &config.scoring_matrix), 
         scope: config.scope.to_string(),
         top_1: top_1,
+        top_1_std: top_1_std,
         top_10: top_10,
+        top_10_std: top_10_std,
         top_10_percent: top_10_percent,
+        top_10_percent_std: top_10_percent_std,
     })?;
     Ok(())
 }

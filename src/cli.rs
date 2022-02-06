@@ -32,11 +32,12 @@ pub fn get_cli_config() -> Result<Config, clap::Error> {
                 .long("approach")
                 .about("Sequence alignment-based or frequency-based approach.")
                 .possible_values(&["sequence", "frequency"])
-                .default_value("sequence"),
+                .default_value("frequency"),
         )
         .arg(
             clap::Arg::new("scoring_matrix")
                 .long("scoring_matrix")
+                .allow_hyphen_values(true)
                 .about("The scoring matrix to use for the alignment approach: ['equal', 'align', 'insert', 'delete'].")
                 .multiple_values(true)
                 .default_values(&["1", "-1", "0", "0"])
@@ -46,14 +47,14 @@ pub fn get_cli_config() -> Result<Config, clap::Error> {
                 .long("scope")
                 .about("The scope of the alignment algorithm: local or global.")
                 .possible_values(&["local", "global"])
-                .default_value("local"),
+                .default_value("global"),
         )
         .arg(
             clap::Arg::new("strategy")
                 .long("strategy")
                 .about("The alignment strategy to use.")
                 .possible_values(&["sw", "nw"])
-                .default_value("sw"),
+                .default_value("nw"),
         )
         .arg(
             clap::Arg::new("delay_limit")
@@ -116,12 +117,12 @@ pub fn get_cli_config() -> Result<Config, clap::Error> {
                 .long("metric")
                 .default_value("kullbrack_leibler")
                 .about("Distance metric to compare a pair of click traces.")
-                .possible_values(&["euclidean", "manhatten", "cosine", "non_intersection", "bhattacharyya", "kullbrack_leibler", "total_variation", "jeffries_matusita", "chi_quared"]),
+                .possible_values(&["euclidean", "manhattan", "cosine", "non_intersection", "bhattacharyya", "kullbrack_leibler", "total_variation", "jeffries_matusita", "chi_quared"]),
         )
         .arg(
             clap::Arg::new("path")
                 .long("path")
-                .default_value("data/test.csv")
+                .default_value("data/browsing.csv")
                 .about("Path to the dataset.")
         )
         .arg(

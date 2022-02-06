@@ -30,30 +30,40 @@ pub fn eval(
         })
         .collect();
 
-    let mut top_1_count = 0;
-    let mut top_10_count = 0;
-    let mut top_10_percent_count = 0;
+    let mut top_1_list: Vec<f64> = Vec::with_capacity(result_list.len());
+    let mut top_10_list: Vec<f64> = Vec::with_capacity(result_list.len());
+    let mut top_10_percent_list: Vec<f64> = Vec::with_capacity(result_list.len());
     for (in_top_1, in_top_10, in_top_10_percent) in result_list.iter() {
         if *in_top_1 {
-            top_1_count += 1
+            top_1_list.push(1.0);
+        } else {
+            top_1_list.push(0.0);
         }
         if *in_top_10 {
-            top_10_count += 1;
+            top_10_list.push(1.0);
+        } else {
+            top_10_list.push(0.0);
         }
         if *in_top_10_percent {
-            top_10_percent_count += 1;
+            top_10_percent_list.push(1.0);
+        } else {
+            top_10_percent_list.push(0.0);
         }
     }
 
-    let top_1: f64 = top_1_count as f64 / result_list.len() as f64;
+    let top_1: f64 = utils::mean(&top_1_list);
     log::info!("Rank 1: {:?}", top_1);
-    let top_10: f64 = top_10_count as f64 / result_list.len() as f64;
+    let top_10: f64 = utils::mean(&top_10_list);
     log::info!("Top 10: {:?}", top_10);
-    let top_10_percent: f64 = top_10_percent_count as f64 / result_list.len() as f64;
+    let top_10_percent: f64 = utils::mean(&top_10_percent_list);
     log::info!("Top 10 Percent: {:?}", top_10_percent);
 
+    let top_1_std = utils::std_deviation(&top_1_list);
+    let top_10_std = utils::std_deviation(&top_10_list);
+    let top_10_percent_std = utils::std_deviation(&top_10_percent_list);
+    
     // Write metrics to final evaluation file
-    utils::write_to_file(config, top_1, top_10, top_10_percent);
+    utils::write_to_file(config, top_1, top_1_std, top_10, top_10_std, top_10_percent, top_10_percent_std).expect("Error writing to evaluation file.");
 }
 
 fn eval_step(
