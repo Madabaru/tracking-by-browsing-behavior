@@ -1,6 +1,8 @@
 use crate::utils;
 
-#[derive(Debug, Clone)]
+use serde::{Serialize, Deserialize};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SeqClickTrace {
     pub url: Vec<u32>,
     pub domain: Vec<u32>,

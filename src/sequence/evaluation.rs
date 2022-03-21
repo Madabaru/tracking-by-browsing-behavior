@@ -14,18 +14,20 @@ use std::{
 pub fn eval(
     config: &cli::Config,
     client_to_seq_map: &BTreeMap<u32, Vec<SeqClickTrace>>,
-    client_to_target_idx_map: &HashMap<u32, usize>,
+    client_to_target_idx_map: &HashMap<u32, Vec<usize>>,
     client_to_sample_idx_map: &HashMap<u32, Vec<usize>>,
+    client_to_test_idx_map: &HashMap<u32, usize>,
 ) {
     let result_list: Vec<(bool, bool, bool)> = client_to_target_idx_map
         .par_iter()
-        .map(|(client, target_idx)| {
+        .map(|(client, target_idx_list)| {
             eval_step(
                 config,
                 client,
-                target_idx,
+                &target_idx_list,
                 &client_to_seq_map,
-                client_to_sample_idx_map,
+                &client_to_sample_idx_map,
+                &client_to_test_idx_map,
             )
         })
         .collect();
@@ -61,71 +63,98 @@ pub fn eval(
     let top_1_std = utils::std_deviation(&top_1_list);
     let top_10_std = utils::std_deviation(&top_10_list);
     let top_10_percent_std = utils::std_deviation(&top_10_percent_list);
-    
+
     // Write metrics to final evaluation file
-    utils::write_to_file(config, top_1, top_1_std, top_10, top_10_std, top_10_percent, top_10_percent_std).expect("Error writing to evaluation file.");
+    utils::write_to_file(
+        config,
+        top_1,
+        top_1_std,
+        top_10,
+        top_10_std,
+        top_10_percent,
+        top_10_percent_std,
+    )
+    .expect("Error writing to evaluation file.");
 }
 
 fn eval_step(
     config: &cli::Config,
     client_target: &u32,
-    target_idx: &usize,
+    target_idx_list: &Vec<usize>,
     client_to_seq_map: &BTreeMap<u32, Vec<SeqClickTrace>>,
     client_to_sample_idx_map: &HashMap<u32, Vec<usize>>,
+    client_to_test_idx_map: &HashMap<u32, usize>,
 ) -> (bool, bool, bool) {
-    let target_click_trace = client_to_seq_map
-        .get(client_target)
-        .unwrap()
-        .get(*target_idx)
-        .unwrap();
+    let mut result_map: HashMap<u32, OrderedFloat<f64>> = HashMap::new();
+    let mut result_tuples: Vec<(u32, OrderedFloat<f64>)> =
+        Vec::with_capacity(client_to_seq_map.len());
 
-    let mut tuples: Vec<(OrderedFloat<f64>, u32)> = Vec::with_capacity(client_to_seq_map.len());
+    for target_idx in target_idx_list.into_iter() {
+        let target_click_trace = client_to_seq_map
+            .get(client_target)
+            .unwrap()
+            .get(*target_idx)
+            .unwrap();
 
-    for (client, click_traces) in client_to_seq_map.into_iter() {
-        let samples_idx = client_to_sample_idx_map.get(client).unwrap();
+        for (client, click_traces) in client_to_seq_map.into_iter() {
+            let samples_idx = client_to_sample_idx_map.get(client).unwrap();
+            let sampled_click_traces: Vec<SeqClickTrace> = samples_idx
+                .into_iter()
+                .map(|idx| click_traces.get(*idx).unwrap().clone())
+                .collect();
 
-        let sampled_click_traces: Vec<SeqClickTrace> = samples_idx
-            .into_iter()
-            .map(|idx| click_traces.get(*idx).unwrap().clone())
-            .collect();
+            if config.typical && !config.dependent {
+                let typical_click_trace =
+                    sequence::click_trace::gen_typical_click_trace(&sampled_click_traces);
 
-        if config.typical {
-            let typical_click_trace =
-                sequence::click_trace::gen_typical_click_trace(&sampled_click_traces);
-
-            let score = compute_alignment_scores(
-                &config.fields,
-                &config.strategy,
-                &config.scope,
-                &config.scoring_matrix,
-                &target_click_trace,
-                &typical_click_trace,
-            );
-            tuples.push((OrderedFloat(score), client.clone()));
-        } else {
-            for sample_click_trace in sampled_click_traces.into_iter() {
                 let score = compute_alignment_scores(
                     &config.fields,
                     &config.strategy,
                     &config.scope,
                     &config.scoring_matrix,
                     &target_click_trace,
-                    &sample_click_trace,
+                    &typical_click_trace,
                 );
-                tuples.push((OrderedFloat(score), client.clone()));
+                result_tuples.push((client.clone(), OrderedFloat(score)));
+            } else if !config.typical && !config.dependent {
+                for sample_click_trace in sampled_click_traces.into_iter() {
+                    let score = compute_alignment_scores(
+                        &config.fields,
+                        &config.strategy,
+                        &config.scope,
+                        &config.scoring_matrix,
+                        &target_click_trace,
+                        &sample_click_trace,
+                    );
+                    result_tuples.push((client.clone(), OrderedFloat(score)));
+                }
+            } else {
+                let test_idx: usize = client_to_test_idx_map.get(client).unwrap().clone();
+                let click_trace: SeqClickTrace = click_traces.get(test_idx).unwrap().clone();
+                let score = compute_alignment_scores(
+                    &config.fields,
+                    &config.strategy,
+                    &config.scope,
+                    &config.scoring_matrix,
+                    &target_click_trace,
+                    &click_trace,
+                );
+                *result_map
+                    .entry(client.clone())
+                    .or_insert(OrderedFloat(0.0)) += OrderedFloat(score);
             }
         }
     }
-    tuples.sort_unstable_by_key(|k| Reverse(k.0));
+
+    if config.dependent {
+        result_tuples = result_map.into_iter().collect();
+    }
+    result_tuples.sort_unstable_by_key(|k| Reverse(k.1));
     let cutoff: usize = (0.1 * client_to_seq_map.len() as f64) as usize;
-    let is_top_10_percent = utils::is_target_in_top_k(client_target, &tuples[..cutoff]);
-    let is_top_10: bool = utils::is_target_in_top_k(client_target, &tuples[..10]);
-    let is_top_1 = client_target.clone() == tuples[0].1;
-    (
-        is_top_1,
-        is_top_10,
-        is_top_10_percent,
-    )
+    let is_top_10_percent = utils::is_target_in_top_k(client_target, &result_tuples[..cutoff]);
+    let is_top_10: bool = utils::is_target_in_top_k(client_target, &result_tuples[..10]);
+    let is_top_1 = client_target.clone() == result_tuples[0].0;
+    (is_top_1, is_top_10, is_top_10_percent)
 }
 
 fn compute_alignment_scores(

@@ -290,5 +290,17 @@ pub fn parse_to_sequence(
         "Total number of mobility traces: {:?}",
         total_num_click_traces
     );
+    log::info!(
+        "Number of unique domain values: {:?}",
+        domain_set.len()
+    );
+    log::info!(
+        "Number of unique url values: {:?}",
+        url_set.len()
+    );
+    log::info!(
+        "Number of unique category values: {:?}",
+        category_set.len()
+    );
     Ok(user_to_seq_map)
 }

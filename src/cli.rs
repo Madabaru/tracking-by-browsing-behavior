@@ -13,10 +13,13 @@ pub struct Config {
     pub min_num_click_traces: usize,
     pub client_sample_size: usize,
     pub click_trace_sample_size: usize,
+    pub target_click_trace_sample_size: usize,
     pub metric: String,
     pub path: String,
+    pub path_to_map: String,
     pub seed: u64,
     pub typical: bool,
+    pub dependent: bool, 
     pub strategy: String,
     pub scoring_matrix: Vec<isize>,
     pub approach: String,
@@ -73,7 +76,7 @@ pub fn get_cli_config() -> Result<Config, clap::Error> {
         .arg(
             clap::Arg::new("max_click_trace_len")
                 .long("max_click_trace_len")
-                .default_value("1000")
+                .default_value("500")
                 .help("Maximum length of a single click trace."),
         )
         .arg(
@@ -109,8 +112,14 @@ pub fn get_cli_config() -> Result<Config, clap::Error> {
         .arg(
             clap::Arg::new("click_trace_sample_size")
                 .long("click_trace_sample_size")
-                .default_value("20")
+                .default_value("500")
                 .help("Number of click traces to sample per client"),
+        )
+        .arg(
+            clap::Arg::new("target_click_trace_sample_size")
+                .long("target_click_trace_sample_size")
+                .default_value("1")
+                .help("Number of target click traces to sample per client"),
         )
         .arg(
             clap::Arg::new("metric")
@@ -126,6 +135,12 @@ pub fn get_cli_config() -> Result<Config, clap::Error> {
                 .help("Path to the dataset.")
         )
         .arg(
+            clap::Arg::new("path_to_map")
+                .long("path_to_map")
+                .default_value("data/client_to_target_idx_map.pkl")
+                .help("Path to the dataset.")
+        )
+        .arg(
             clap::Arg::new("seed")
                 .long("seed")
                 .default_value("0")
@@ -136,6 +151,12 @@ pub fn get_cli_config() -> Result<Config, clap::Error> {
                 .long("typical")
                 .default_value("false")
                 .help("Set to true if you want to compute a typical click trace (session) per client.")
+        )
+        .arg(
+            clap::Arg::new("dependent")
+                .long("dependent")
+                .default_value("true")
+                .help("Set true of the linkage attacks are dependent on each other.")
         )
         .get_matches();
 
@@ -170,6 +191,11 @@ pub fn get_cli_config() -> Result<Config, clap::Error> {
             .unwrap_or_default()
             .parse::<usize>()
             .unwrap(),
+        target_click_trace_sample_size: matches
+            .value_of("target_click_trace_sample_size")
+            .unwrap_or_default()
+            .parse::<usize>()
+            .unwrap(),
         max_click_rate: matches
             .value_of("max_click_rate")
             .unwrap_or_default()
@@ -194,6 +220,10 @@ pub fn get_cli_config() -> Result<Config, clap::Error> {
             .value_of("path")
             .map(String::from)
             .unwrap_or_default(),
+        path_to_map: matches
+            .value_of("path_to_map")
+            .map(String::from)
+            .unwrap_or_default(),
         seed: matches
             .value_of("seed")
             .unwrap_or_default()
@@ -201,6 +231,11 @@ pub fn get_cli_config() -> Result<Config, clap::Error> {
             .unwrap(),
         typical: matches
             .value_of("typical")
+            .unwrap_or_default()
+            .parse::<bool>()
+            .unwrap(),
+        dependent: matches
+            .value_of("dependent")
             .unwrap_or_default()
             .parse::<bool>()
             .unwrap(),

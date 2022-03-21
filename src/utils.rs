@@ -43,14 +43,11 @@ pub fn gen_vector_from_str(s: &str, set: &IndexSet<String>) -> Vec<u32> {
     vector
 }
 
-pub fn is_target_in_top_k(client_target: &u32, tuples: &[(OrderedFloat<f64>, u32)]) -> bool {
-    tuples.iter().any(|(_, b)| b == client_target)
+pub fn is_target_in_top_k(client_target: &u32, tuples: &[(u32, OrderedFloat<f64>)]) -> bool {
+    tuples.iter().any(|(a, _)| a == client_target)
 }
 
-// Returns the most frequent element in a given vector of values.
-//
-// Returns the most frequent element in a given vector of values. 
-// The values can be of arbitrary value.
+// Returns the most frequent element in a given vector of values. The values can be of arbitrary type.
 pub fn get_most_freq_element<T>(vector: &[T]) -> T
 where
     T: std::cmp::Eq + std::hash::Hash + Copy,
@@ -76,15 +73,19 @@ pub fn mean(data: &[f64]) -> f64 {
 pub fn std_deviation(data: &[f64]) -> f64 {
     let data_mean = mean(data);
     let count = data.len();
-    let variance = data.iter().map(|value| {
-        let diff = data_mean - (*value as f64);
-        diff * diff
-    }).sum::<f64>() / count as f64;
+    let variance = data
+        .iter()
+        .map(|value| {
+            let diff = data_mean - (*value as f64);
+            diff * diff
+        })
+        .sum::<f64>()
+        / count as f64;
     variance.sqrt()
 }
 
 // Calculates the confidence interval.
-// 
+//
 // Calculates and returns the confidence interval in form of a tuple with lower and
 // upper bound for a mean estimate.
 // The default confidence level is 0.95 using a z-value= 1.96.
@@ -96,7 +97,6 @@ pub fn std_deviation(data: &[f64]) -> f64 {
 //     let upper_bound = mean - 1.96 * (std / f64::sqrt(sample_size));
 //     (lower_bound, upper_bound)
 // }
-
 
 #[derive(Serialize)]
 struct Row {
@@ -113,6 +113,7 @@ struct Row {
     approach: String,
     fields: String,
     typical: bool,
+    dependent: bool,
     metric: String,
     strategy: String,
     scoring_matrix: String,
@@ -158,11 +159,12 @@ pub fn write_to_file(
         approach: config.approach.to_string(),
         client_sample_size: config.client_sample_size,
         click_trace_sample_size: config.click_trace_sample_size,
-        fields: format!("{:?}", &config.fields), 
+        fields: format!("{:?}", &config.fields),
         typical: config.typical,
+        dependent: config.dependent,
         metric: config.metric.to_string(),
         strategy: config.strategy.to_string(),
-        scoring_matrix: format!("{:?}", &config.scoring_matrix), 
+        scoring_matrix: format!("{:?}", &config.scoring_matrix),
         scope: config.scope.to_string(),
         top_1: top_1,
         top_1_std: top_1_std,

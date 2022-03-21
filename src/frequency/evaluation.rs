@@ -20,21 +20,24 @@ use std::{
 pub fn eval(
     config: &cli::Config,
     client_to_freq_map: &BTreeMap<u32, Vec<FreqClickTrace>>,
-    client_to_target_idx_map: &HashMap<u32, usize>,
+    client_to_target_idx_map: &HashMap<u32, Vec<usize>>,
     client_to_sample_idx_map: &HashMap<u32, Vec<usize>>,
+    client_to_test_idx_map: &HashMap<u32, usize>,
 ) {
+
     let result_list: Vec<(bool, bool, bool)> = client_to_target_idx_map
         .par_iter()
-        .map(|(client, target_idx)| {
+        .map(|(client_target, target_idx_list)| {
             eval_step(
                 config,
-                client,
-                target_idx,
+                client_target,
+                &target_idx_list,
                 &client_to_freq_map,
-                client_to_sample_idx_map,
+                &client_to_sample_idx_map,
+                &client_to_test_idx_map
             )
         })
-        .collect();
+        .collect();    
 
     let mut top_1_list: Vec<f64> = Vec::with_capacity(result_list.len());
     let mut top_10_list: Vec<f64> = Vec::with_capacity(result_list.len());
@@ -75,71 +78,95 @@ pub fn eval(
 fn eval_step(
     config: &cli::Config,
     client_target: &u32,
-    target_idx: &usize,
+    target_idx_list: &Vec<usize>,
     client_to_freq_map: &BTreeMap<u32, Vec<FreqClickTrace>>,
     client_to_sample_idx_map: &HashMap<u32, Vec<usize>>,
+    client_to_test_idx_map: &HashMap<u32, usize>
 ) -> (bool, bool, bool) {
+    
     let metric = DistanceMetric::from_str(&config.metric).unwrap();
-    let target_click_trace = client_to_freq_map
+    let mut result_map: HashMap<u32, OrderedFloat<f64>> = HashMap::new();
+    let mut result_tuples: Vec<(u32, OrderedFloat<f64>)> = Vec::with_capacity(client_to_freq_map.len());
+
+    for target_idx in target_idx_list.into_iter() {
+        let target_click_trace = client_to_freq_map
         .get(client_target)
         .unwrap()
         .get(*target_idx)
         .unwrap();
 
-    let mut tuples: Vec<(OrderedFloat<f64>, u32)> = Vec::with_capacity(client_to_freq_map.len());
+        for (client, click_traces) in client_to_freq_map.into_iter() {
+            let samples_idx = client_to_sample_idx_map.get(client).unwrap();
+            let sampled_click_traces: Vec<FreqClickTrace> = samples_idx
+                .into_iter()
+                .map(|idx| click_traces.get(*idx).unwrap().clone())
+                .collect();
 
-    for (client, click_traces) in client_to_freq_map.into_iter() {
-        let samples_idx = client_to_sample_idx_map.get(client).unwrap();
-        let sampled_click_traces: Vec<FreqClickTrace> = samples_idx
-            .into_iter()
-            .map(|idx| click_traces.get(*idx).unwrap().clone())
-            .collect();
-
-        let url_set = get_unique_set(target_click_trace, &sampled_click_traces, &DataFields::Url);
-        let domain_set = get_unique_set(
-            target_click_trace,
-            &sampled_click_traces,
-            &DataFields::Domain,
-        );
-        let category_set = get_unique_set(
-            target_click_trace,
-            &sampled_click_traces,
-            &DataFields::Category,
-        );
-        let age_set = get_unique_set(target_click_trace, &sampled_click_traces, &DataFields::Age);
-        let gender_set = get_unique_set(
-            target_click_trace,
-            &sampled_click_traces,
-            &DataFields::Gender,
-        );
-
-        let vect_target_click_trace = click_trace::vectorize_click_trace(
-            target_click_trace,
-            &url_set,
-            &domain_set,
-            &category_set,
-            &age_set,
-            &gender_set,
-        );
-
-        if config.typical {
-            let vect_typ_ref_click_trace = click_trace::gen_typical_vect_click_trace(
+            let url_set = get_unique_set(target_click_trace, &sampled_click_traces, &DataFields::Url);
+            let domain_set = get_unique_set(
+                target_click_trace,
                 &sampled_click_traces,
+                &DataFields::Domain,
+            );
+            let category_set = get_unique_set(
+                target_click_trace,
+                &sampled_click_traces,
+                &DataFields::Category,
+            );
+            let age_set = get_unique_set(target_click_trace, &sampled_click_traces, &DataFields::Age);
+            let gender_set = get_unique_set(
+                target_click_trace,
+                &sampled_click_traces,
+                &DataFields::Gender,
+            );
+    
+            let vect_target_click_trace = click_trace::vectorize_click_trace(
+                target_click_trace,
                 &url_set,
                 &domain_set,
                 &category_set,
                 &age_set,
                 &gender_set,
             );
-            let dist = compute_dist(
-                &config.fields,
-                &metric,
-                &vect_target_click_trace,
-                &vect_typ_ref_click_trace,
-            );
-            tuples.push((OrderedFloat(dist), client.clone()));
-        } else {
-            for click_trace in sampled_click_traces.into_iter() {
+
+            if config.typical && !config.dependent {
+
+                let vect_typ_ref_click_trace = click_trace::gen_typical_vect_click_trace(
+                    &sampled_click_traces,
+                    &url_set,
+                    &domain_set,
+                    &category_set,
+                    &age_set,
+                    &gender_set,
+                );
+                let dist = compute_dist(
+                    &config.fields,
+                    &metric,
+                    &vect_target_click_trace,
+                    &vect_typ_ref_click_trace,
+                );
+                result_tuples.push((client.clone(), OrderedFloat(dist)));
+            
+            } else if !config.typical && !config.dependent {
+
+                for click_trace in sampled_click_traces.into_iter() {
+                    let vect_ref_click_trace = click_trace::vectorize_click_trace(
+                        &click_trace,
+                        &url_set,
+                        &domain_set,
+                        &category_set,
+                        &age_set,
+                        &gender_set,
+                    );
+                    let dist =
+                        compute_dist(&config.fields, &metric, &vect_target_click_trace, &vect_ref_click_trace);
+                    result_tuples.push((client.clone(), OrderedFloat(dist)));
+                }
+
+            } else {
+
+                let test_idx: usize = client_to_test_idx_map.get(client).unwrap().clone();
+                let click_trace: FreqClickTrace = click_traces.get(test_idx).unwrap().clone();
                 let vect_ref_click_trace = click_trace::vectorize_click_trace(
                     &click_trace,
                     &url_set,
@@ -150,16 +177,20 @@ fn eval_step(
                 );
                 let dist =
                     compute_dist(&config.fields, &metric, &vect_target_click_trace, &vect_ref_click_trace);
-                tuples.push((OrderedFloat(dist), client.clone()));
+                *result_map.entry(client.clone()).or_insert(OrderedFloat(0.0)) += OrderedFloat(dist);
             }
         }
     }
-    tuples.sort_unstable_by_key(|k| k.0);
+    
+    if config.dependent {
+        result_tuples = result_map.into_iter().collect();
+    }
+
+    result_tuples.sort_unstable_by_key(|k| k.1);
     let cutoff: usize = (0.1 * client_to_freq_map.len() as f64) as usize;
-    let is_top_10_percent = utils::is_target_in_top_k(client_target, &tuples[..cutoff]);
-    let is_top_10: bool = utils::is_target_in_top_k(client_target, &tuples[..10]);
-    let is_top_1: bool = client_target.clone() == tuples[0].1;
-    // let tuple_preds_and_labels = utils::gen_pred_and_label_vec(client_target, &tuples);
+    let is_top_10_percent = utils::is_target_in_top_k(client_target, &result_tuples[..cutoff]);
+    let is_top_10: bool = utils::is_target_in_top_k(client_target, &result_tuples[..10]);
+    let is_top_1: bool = client_target.clone() == result_tuples[0].0;
     (
         is_top_1,
         is_top_10,
@@ -266,3 +297,5 @@ pub fn get_unique_set(
     let set: IndexSet<String> = IndexSet::from_iter(vector);
     set
 }
+
+
