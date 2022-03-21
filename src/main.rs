@@ -53,6 +53,12 @@ fn main() {
         //     serde_pickle::from_slice(&serialized_client_to_test_idx_map, Default::default())
         //         .unwrap();
 
+        log::info!("Sampling test click traces per client...");
+        let client_to_test_idx_map: HashMap<u32, usize> = sample::gen_client_to_test_idx_map(
+            &client_to_sample_idx_map,
+            &mut rng,
+        );
+        
         log::info!("Starting the evaluation...");
         sequence::evaluation::eval(
             &config,
