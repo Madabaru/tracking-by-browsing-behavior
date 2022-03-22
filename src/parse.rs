@@ -64,6 +64,12 @@ impl FromStr for DataFields {
     }
 }
 
+// Parses the raw data into a convenient hash map.
+//
+// Parses the raw iput data into a convenient data structure for the histogram-based approach.
+// A BTreeMap is used to store each client (as key) and the corresponding click traces in a vector (as value).
+// In contrast to a HashMap, a BTreeMap holds a fixed order over the keys. A fixed order is required in order to ensure 
+// reproducability during sampling. A click trace itself is saved in a struct object. 
 pub fn parse_to_frequency(
     config: &Config,
 ) -> Result<BTreeMap<u32, Vec<FreqClickTrace>>, Box<dyn Error>> {
@@ -290,17 +296,8 @@ pub fn parse_to_sequence(
         "Total number of mobility traces: {:?}",
         total_num_click_traces
     );
-    log::info!(
-        "Number of unique domain values: {:?}",
-        domain_set.len()
-    );
-    log::info!(
-        "Number of unique url values: {:?}",
-        url_set.len()
-    );
-    log::info!(
-        "Number of unique category values: {:?}",
-        category_set.len()
-    );
+    log::info!("Number of unique domain values: {:?}", domain_set.len());
+    log::info!("Number of unique url values: {:?}", url_set.len());
+    log::info!("Number of unique category values: {:?}", category_set.len());
     Ok(user_to_seq_map)
 }
