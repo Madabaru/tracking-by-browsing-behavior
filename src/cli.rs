@@ -19,7 +19,8 @@ pub struct Config {
     pub path_to_map: String,
     pub seed: u64,
     pub typical: bool,
-    pub dependent: bool, 
+    pub dependent: bool,
+    pub multiple: bool,
     pub strategy: String,
     pub scoring_matrix: Vec<isize>,
     pub approach: String,
@@ -153,6 +154,12 @@ pub fn get_cli_config() -> Result<Config, clap::Error> {
                 .help("Set to true if you want to compute a typical click trace (session) per client.")
         )
         .arg(
+            clap::Arg::new("multiple")
+                .long("multiple")
+                .default_value("false")
+                .help("Set to true the attacker uses multiple target traces to his/her advantage.")
+        )
+        .arg(
             clap::Arg::new("dependent")
                 .long("dependent")
                 .default_value("true")
@@ -231,6 +238,11 @@ pub fn get_cli_config() -> Result<Config, clap::Error> {
             .unwrap(),
         typical: matches
             .value_of("typical")
+            .unwrap_or_default()
+            .parse::<bool>()
+            .unwrap(),
+        multiple: matches
+            .value_of("multiple")
             .unwrap_or_default()
             .parse::<bool>()
             .unwrap(),

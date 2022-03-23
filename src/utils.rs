@@ -8,6 +8,7 @@ use std::{collections::HashMap, error::Error};
 
 const EVAL_PATH: &str = "tmp/evaluation";
 
+// Normalizes the values of a given vector
 pub fn normalize_vector(vector: &mut [f64]) {
     let norm = vector.iter().map(|x| *x * *x).sum::<f64>().sqrt();
     if norm > 0. {
@@ -26,6 +27,7 @@ pub fn gen_vector_from_f64(click_rate: f64, min: f64, max: f64) -> Vec<u32> {
     vector
 }
 
+// Generates a vector of fixed size from a given frequency map. The size depends on the size set of unique values.
 pub fn gen_vector_from_freq_map(
     type_to_freq_map: &HashMap<String, u32>,
     set: &IndexSet<String>,
@@ -35,6 +37,11 @@ pub fn gen_vector_from_freq_map(
         vector[set.get_full(key).unwrap().0] = value.clone();
     }
     vector
+}
+
+// Flattens a nested vector 
+pub fn flatten<T>(nested: Vec<Vec<T>>) -> Vec<T> {
+    nested.into_iter().flatten().collect()
 }
 
 pub fn gen_vector_from_str(s: &str, set: &IndexSet<String>) -> Vec<u32> {
@@ -84,6 +91,17 @@ pub fn std_deviation(data: &[f64]) -> f64 {
     variance.sqrt()
 }
 
+pub fn is_significant(tuples: &[(u32, OrderedFloat<f64>)]) -> bool {
+    let mut significant = false;
+    let diff_1st_to_2nd = tuples.get(0).unwrap().1 - tuples.get(1).unwrap().1;
+    let diff_2nd_to_3rd = tuples.get(1).unwrap().1 - tuples.get(2).unwrap().1;
+    let siginificance_level: OrderedFloat<f64> = OrderedFloat(1.0) - (diff_2nd_to_3rd / diff_1st_to_2nd);
+    if siginificance_level >= OrderedFloat(0.75) {
+        significant = true;
+    }
+    significant
+}
+
 // Calculates the confidence interval.
 //
 // Calculates and returns the confidence interval in form of a tuple with lower and
@@ -115,6 +133,7 @@ struct Row {
     fields: String,
     typical: bool,
     dependent: bool,
+    multiple: bool, 
     metric: String,
     strategy: String,
     scoring_matrix: String,
@@ -127,6 +146,7 @@ struct Row {
     top_10_percent_std: f64,
 }
 
+// Writes the performance scores as well as the configuration to file
 pub fn write_to_file(
     config: &Config,
     top_1: f64,
@@ -164,6 +184,7 @@ pub fn write_to_file(
         fields: format!("{:?}", &config.fields),
         typical: config.typical,
         dependent: config.dependent,
+        multiple: config.multiple,
         metric: config.metric.to_string(),
         strategy: config.strategy.to_string(),
         scoring_matrix: format!("{:?}", &config.scoring_matrix),
