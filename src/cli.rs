@@ -36,7 +36,7 @@ pub fn get_cli_config() -> Result<Config, clap::Error> {
                 .long("approach")
                 .help("Sequence alignment-based or frequency-based approach.")
                 .possible_values(&["sequence", "frequency"])
-                .default_value("frequency"),
+                .default_value("sequence"),
         )
         .arg(
             clap::Arg::new("scoring_matrix")
@@ -44,7 +44,7 @@ pub fn get_cli_config() -> Result<Config, clap::Error> {
                 .allow_hyphen_values(true)
                 .help("The scoring matrix to use for the alignment approach: ['equal', 'align', 'insert', 'delete'].")
                 .multiple_values(true)
-                .default_values(&["1", "-1", "0", "0"])
+                .default_values(&["1", "-1", "-1", "-1"])
         )
         .arg(
             clap::Arg::new("scope")

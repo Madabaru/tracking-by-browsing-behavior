@@ -91,6 +91,9 @@ pub fn std_deviation(data: &[f64]) -> f64 {
     variance.sqrt()
 }
 
+// Checks whether the difference from the 1st to the 2nd is significant greater
+// than the difference from the 2nd to the 3rd in order to assess 
+// the success of the linkage attack. The threshold is set to 0.75. 
 pub fn is_significant(tuples: &[(u32, OrderedFloat<f64>)]) -> bool {
     let mut significant = false;
     let diff_1st_to_2nd = tuples.get(0).unwrap().1 - tuples.get(1).unwrap().1;
