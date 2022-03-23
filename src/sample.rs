@@ -1,6 +1,4 @@
-use rand::{prelude::SliceRandom,
-    seq::IteratorRandom, Rng
-};
+use rand::{prelude::SliceRandom, seq::IteratorRandom, Rng};
 use std::collections::{BTreeMap, HashMap};
 
 // Sample a subset of clients and a target click trace that the evaluation is based upon

@@ -82,7 +82,7 @@ pub fn eval_dependent(
     config: &cli::Config,
     client_to_seq_map: &BTreeMap<u32, Vec<SeqClickTrace>>,
     client_to_target_idx_map: &HashMap<u32, Vec<usize>>,
-    client_to_sample_idx_map: &mut HashMap<u32, Vec<usize>>
+    client_to_sample_idx_map: &mut HashMap<u32, Vec<usize>>,
 ) {
     let nested_result_list: Vec<Vec<(bool, bool, bool)>> = client_to_target_idx_map
         .iter()
@@ -92,7 +92,7 @@ pub fn eval_dependent(
                 client_target,
                 &target_idx_list,
                 &client_to_seq_map,
-                client_to_sample_idx_map
+                client_to_sample_idx_map,
             )
         })
         .collect();
@@ -151,7 +151,6 @@ fn eval_step(
     client_to_sample_idx_map: &HashMap<u32, Vec<usize>>,
     client_to_test_idx_map: &HashMap<u32, usize>,
 ) -> Vec<(bool, bool, bool)> {
-
     let mut result_map: HashMap<u32, OrderedFloat<f64>> = HashMap::new();
     let mut result_tuples_list: Vec<(bool, bool, bool)> = Vec::with_capacity(target_idx_list.len());
 
@@ -162,7 +161,8 @@ fn eval_step(
             .get(*target_idx)
             .unwrap();
 
-        let mut result_tuples: Vec<(u32, OrderedFloat<f64>)> = Vec::with_capacity(client_to_seq_map.len());
+        let mut result_tuples: Vec<(u32, OrderedFloat<f64>)> =
+            Vec::with_capacity(client_to_seq_map.len());
 
         for (client, click_traces) in client_to_seq_map.into_iter() {
             let samples_idx = client_to_sample_idx_map.get(client).unwrap();
@@ -184,7 +184,6 @@ fn eval_step(
                     &typical_click_trace,
                 );
                 result_tuples.push((client.clone(), OrderedFloat(score)));
-
             } else if !config.typical && !config.multiple {
                 for sample_click_trace in sampled_click_traces.into_iter() {
                     let score = compute_alignment_scores(
@@ -217,7 +216,8 @@ fn eval_step(
         if !config.multiple {
             result_tuples.sort_unstable_by_key(|k| Reverse(k.1));
             let cutoff: usize = (0.1 * client_to_seq_map.len() as f64) as usize;
-            let is_top_10_percent = utils::is_target_in_top_k(client_target, &result_tuples[..cutoff]);
+            let is_top_10_percent =
+                utils::is_target_in_top_k(client_target, &result_tuples[..cutoff]);
             let is_top_10: bool = utils::is_target_in_top_k(client_target, &result_tuples[..10]);
             let is_top_1: bool = client_target.clone() == result_tuples[0].0;
             result_tuples_list.push((is_top_1, is_top_10, is_top_10_percent));
@@ -243,7 +243,6 @@ fn eval_step_dependent(
     client_to_seq_map: &BTreeMap<u32, Vec<SeqClickTrace>>,
     client_to_sample_idx_map: &mut HashMap<u32, Vec<usize>>,
 ) -> Vec<(bool, bool, bool)> {
-
     let mut result_tuples_list: Vec<(bool, bool, bool)> = Vec::with_capacity(target_idx_list.len());
 
     for target_idx in target_idx_list.into_iter() {
@@ -253,7 +252,8 @@ fn eval_step_dependent(
             .get(*target_idx)
             .unwrap();
 
-        let mut result_tuples: Vec<(u32, OrderedFloat<f64>)> = Vec::with_capacity(client_to_seq_map.len());
+        let mut result_tuples: Vec<(u32, OrderedFloat<f64>)> =
+            Vec::with_capacity(client_to_seq_map.len());
 
         for (client, click_traces) in client_to_seq_map.into_iter() {
             let samples_idx = client_to_sample_idx_map.get(client).unwrap();
@@ -289,7 +289,6 @@ fn eval_step_dependent(
         let is_top_10: bool = utils::is_target_in_top_k(client_target, &result_tuples[..10]);
         let is_top_1: bool = client_target.clone() == result_tuples[0].0;
         result_tuples_list.push((is_top_1, is_top_10, is_top_10_percent));
-        
     }
     result_tuples_list
 }

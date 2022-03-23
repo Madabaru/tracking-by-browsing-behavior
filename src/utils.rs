@@ -39,7 +39,7 @@ pub fn gen_vector_from_freq_map(
     vector
 }
 
-// Flattens a nested vector 
+// Flattens a nested vector
 pub fn flatten<T>(nested: Vec<Vec<T>>) -> Vec<T> {
     nested.into_iter().flatten().collect()
 }
@@ -92,13 +92,14 @@ pub fn std_deviation(data: &[f64]) -> f64 {
 }
 
 // Checks whether the difference from the 1st to the 2nd is significant greater
-// than the difference from the 2nd to the 3rd in order to assess 
-// the success of the linkage attack. The threshold is set to 0.75. 
+// than the difference from the 2nd to the 3rd in order to assess
+// the success of the linkage attack. The threshold is set to 0.75.
 pub fn is_significant(tuples: &[(u32, OrderedFloat<f64>)]) -> bool {
     let mut significant = false;
     let diff_1st_to_2nd = tuples.get(0).unwrap().1 - tuples.get(1).unwrap().1;
     let diff_2nd_to_3rd = tuples.get(1).unwrap().1 - tuples.get(2).unwrap().1;
-    let siginificance_level: OrderedFloat<f64> = OrderedFloat(1.0) - (diff_2nd_to_3rd / diff_1st_to_2nd);
+    let siginificance_level: OrderedFloat<f64> =
+        OrderedFloat(1.0) - (diff_2nd_to_3rd / diff_1st_to_2nd);
     if siginificance_level >= OrderedFloat(0.75) {
         significant = true;
     }
@@ -136,7 +137,7 @@ struct Row {
     fields: String,
     typical: bool,
     dependent: bool,
-    multiple: bool, 
+    multiple: bool,
     metric: String,
     strategy: String,
     scoring_matrix: String,
