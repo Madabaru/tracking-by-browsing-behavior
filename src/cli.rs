@@ -6,14 +6,14 @@ use std::str::FromStr;
 pub struct Config {
     pub delay_limit: f64,
     pub fields: Vec<DataFields>,
-    pub max_click_trace_len: usize,
-    pub min_click_trace_len: usize,
-    pub max_click_trace_duration: f64,
-    pub max_click_rate: f64,
-    pub min_num_click_traces: usize,
-    pub client_sample_size: usize,
-    pub click_trace_sample_size: usize,
-    pub target_click_trace_sample_size: usize,
+    pub max_trace_len: usize,
+    pub min_trace_len: usize,
+    pub max_trace_duration: f64,
+    pub max_rate: f64,
+    pub min_num_traces: usize,
+    pub user_sample_size: usize,
+    pub trace_sample_size: usize,
+    pub target_trace_sample_size: usize,
     pub metric: String,
     pub path: String,
     pub path_to_map: String,
@@ -27,6 +27,7 @@ pub struct Config {
     pub scope: String,
 }
 
+/// Loads the (optional) command line arguments and the corresponding values. 
 pub fn get_cli_config() -> Result<Config, clap::Error> {
     let matches = clap::App::new("Tracking-Users-by-Browsing-Behavior")
         .version("1.0")
@@ -63,70 +64,64 @@ pub fn get_cli_config() -> Result<Config, clap::Error> {
         .arg(
             clap::Arg::new("delay_limit")
                 .long("delay_limit")
-                .help("Maximum delay between two consecutive clicks.")
+                .help("Maximum delay between two consecutive events.")
                 .default_value("1800.0"),
         )
         .arg(
             clap::Arg::new("fields")
                 .long("fields")
-                .possible_values(&["url", "category", "domain", "hour", "day", "age", "gender", "click_rate"])
+                .possible_values(&["url", "category", "domain", "hour", "day", "age", "gender", "rate"])
                 .help("Data fields to consider for the analysis.")
                 .multiple_values(true)
                 .default_values(&["category", "domain", "age", "gender", "url"])
         )
         .arg(
-            clap::Arg::new("max_click_trace_len")
-                .long("max_click_trace_len")
+            clap::Arg::new("max_trace_len")
+                .long("max_trace_len")
                 .default_value("500")
-                .help("Maximum length of a single click trace."),
+                .help("Maximum length of a single trace."),
         )
         .arg(
-            clap::Arg::new("min_click_trace_len")
-                .long("min_click_trace_len")
+            clap::Arg::new("min_trace_len")
+                .long("min_trace_len")
                 .default_value("10")
-                .help("Minimum length of a single click trace."),
+                .help("Minimum length of a single trace."),
         )
         .arg(
-            clap::Arg::new("max_click_trace_duration")
-                .long("max_click_trace_duration")
+            clap::Arg::new("max_trace_duration")
+                .long("max_trace_duration")
                 .default_value("86400.0")
-                .help("Maximum duration of a single click trace."),
+                .help("Maximum duration of a single trace."),
         )
         .arg(
-            clap::Arg::new("min_num_click_traces")
-                .long("min_num_click_traces")
+            clap::Arg::new("min_num_traces")
+                .long("min_num_traces")
                 .default_value("4")
-                .help("Minimum number of click traces per client."),
+                .help("Minimum number of traces per user."),
         )
         .arg(
-            clap::Arg::new("max_click_rate")
-                .long("max_click_rate")
-                .default_value("2.0")
-                .help("Maximum allowed click rate (number of clicks / time)."),
-        )
-        .arg(
-            clap::Arg::new("client_sample_size")
-                .long("client_sample_size")
+            clap::Arg::new("user_sample_size")
+                .long("user_sample_size")
                 .default_value("400")
                 .help("Number of clients to sample."),
         )
         .arg(
-            clap::Arg::new("click_trace_sample_size")
-                .long("click_trace_sample_size")
+            clap::Arg::new("trace_sample_size")
+                .long("trace_sample_size")
                 .default_value("500")
-                .help("Number of click traces to sample per client"),
+                .help("Number of traces to sample per user"),
         )
         .arg(
-            clap::Arg::new("target_click_trace_sample_size")
-                .long("target_click_trace_sample_size")
+            clap::Arg::new("target_trace_sample_size")
+                .long("target_trace_sample_size")
                 .default_value("1")
-                .help("Number of target click traces to sample per client"),
+                .help("Number of target traces to sample per user"),
         )
         .arg(
             clap::Arg::new("metric")
                 .long("metric")
                 .default_value("kullbrack_leibler")
-                .help("Distance metric to compare a pair of click traces.")
+                .help("Distance metric to compare a pair of traces.")
                 .possible_values(&["euclidean", "manhattan", "cosine", "non_intersection", "bhattacharyya", "kullbrack_leibler", "total_variation", "jeffries_matusita", "chi_quared"]),
         )
         .arg(
@@ -138,7 +133,7 @@ pub fn get_cli_config() -> Result<Config, clap::Error> {
         .arg(
             clap::Arg::new("path_to_map")
                 .long("path_to_map")
-                .default_value("data/client_to_target_idx_map.pkl")
+                .default_value("data/user_to_target_idx_map.pkl")
                 .help("Path to the dataset.")
         )
         .arg(
@@ -151,7 +146,7 @@ pub fn get_cli_config() -> Result<Config, clap::Error> {
             clap::Arg::new("typical")
                 .long("typical")
                 .default_value("false")
-                .help("Set to true if you want to compute a typical click trace (session) per client.")
+                .help("Set to true if you want to compute a typical trace (session) per user.")
         )
         .arg(
             clap::Arg::new("multiple")
@@ -177,8 +172,8 @@ pub fn get_cli_config() -> Result<Config, clap::Error> {
             .value_of("metric")
             .map(String::from)
             .unwrap_or_default(),
-        max_click_trace_len: matches
-            .value_of("max_click_trace_len")
+        max_trace_len: matches
+            .value_of("max_trace_len")
             .unwrap_or_default()
             .parse::<usize>()
             .unwrap(),
@@ -188,38 +183,38 @@ pub fn get_cli_config() -> Result<Config, clap::Error> {
             .iter()
             .map(|x| DataFields::from_str(x).unwrap())
             .collect(),
-        click_trace_sample_size: matches
-            .value_of("click_trace_sample_size")
+        trace_sample_size: matches
+            .value_of("trace_sample_size")
             .unwrap_or_default()
             .parse::<usize>()
             .unwrap(),
-        client_sample_size: matches
-            .value_of("client_sample_size")
+        user_sample_size: matches
+            .value_of("user_sample_size")
             .unwrap_or_default()
             .parse::<usize>()
             .unwrap(),
-        target_click_trace_sample_size: matches
-            .value_of("target_click_trace_sample_size")
+        target_trace_sample_size: matches
+            .value_of("target_trace_sample_size")
             .unwrap_or_default()
             .parse::<usize>()
             .unwrap(),
-        max_click_rate: matches
-            .value_of("max_click_rate")
+        max_rate: matches
+            .value_of("max_rate")
             .unwrap_or_default()
             .parse::<f64>()
             .unwrap(),
-        max_click_trace_duration: matches
-            .value_of("max_click_trace_duration")
+        max_trace_duration: matches
+            .value_of("max_trace_duration")
             .unwrap_or_default()
             .parse::<f64>()
             .unwrap(),
-        min_click_trace_len: matches
-            .value_of("min_click_trace_len")
+        min_trace_len: matches
+            .value_of("min_trace_len")
             .unwrap_or_default()
             .parse::<usize>()
             .unwrap(),
-        min_num_click_traces: matches
-            .value_of("min_num_click_traces")
+        min_num_traces: matches
+            .value_of("min_num_traces")
             .unwrap_or_default()
             .parse::<usize>()
             .unwrap(),

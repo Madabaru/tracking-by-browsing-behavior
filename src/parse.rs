@@ -1,6 +1,6 @@
 use crate::cli::Config;
-use crate::frequency::{click_trace::FreqClickTrace, maths};
-use crate::sequence::click_trace::SeqClickTrace;
+use crate::frequency::{trace::FreqTrace, maths};
+use crate::sequence::trace::SeqTrace;
 
 use chrono::{prelude::DateTime, Datelike, Timelike, Utc};
 use indexmap::IndexSet;
@@ -36,8 +36,7 @@ pub enum DataFields {
     ActiveSeconds,
     Category,
     Day,
-    Hour,
-    ClickRate,
+    Hour
 }
 
 impl Display for DataFields {
@@ -58,65 +57,58 @@ impl FromStr for DataFields {
             "hour" => Ok(Self::Hour),
             "gender" => Ok(Self::Gender),
             "active_seconds" => Ok(Self::ActiveSeconds),
-            "click_rate" => Ok(Self::ClickRate),
             x => panic!("Error: Wrong data field supplied: {:?}", x),
         }
     }
 }
 
-// Parses the raw data into a convenient hash map.
-//
-// Parses the raw iput data into a convenient data structure for the histogram-based approach.
-// A BTreeMap is used to store each client (as key) and the corresponding click traces in a vector (as value).
-// In contrast to a HashMap, a BTreeMap holds a fixed order over the keys. A fixed order is required in order to ensure 
-// reproducability during sampling. A click trace itself is saved in a struct object. 
+/// Parses the raw data into a convenient tree map for the histogram-based approach.
 pub fn parse_to_frequency(
     config: &Config,
-) -> Result<BTreeMap<u32, Vec<FreqClickTrace>>, Box<dyn Error>> {
+) -> Result<BTreeMap<u32, Vec<FreqTrace>>, Box<dyn Error>> {
     let mut prev_time: f64 = 0.0;
     let mut prev_user = String::new();
-    let mut click_trace_len: usize = 0;
+    let mut trace_len: usize = 0;
     let mut user_id: u32 = 0;
 
-    let mut client_to_freq_map: BTreeMap<u32, Vec<FreqClickTrace>> = BTreeMap::new();
+    let mut user_to_freq_map: BTreeMap<u32, Vec<FreqTrace>> = BTreeMap::new();
     let mut reader = csv::Reader::from_path(&config.path)?;
 
     for result in reader.deserialize() {
         let record: Record = result?;
 
         if prev_user != record.user_id && !prev_user.is_empty() {
-            // Check last mobility trace added to previous client
-            let prev_click_traces_list = client_to_freq_map.get_mut(&user_id).unwrap();
-            if !prev_click_traces_list.is_empty() {
-                if click_trace_len < config.min_click_trace_len {
-                    prev_click_traces_list.pop();
+            // Check last trace added to previous user
+            let prev_traces_list = user_to_freq_map.get_mut(&user_id).unwrap();
+            if !prev_traces_list.is_empty() {
+                if trace_len < config.min_trace_len {
+                    prev_traces_list.pop();
                 }
             }
             user_id += 1;
         }
 
-        if !client_to_freq_map.contains_key(&user_id) {
-            client_to_freq_map.insert(user_id, Vec::with_capacity(10));
+        if !user_to_freq_map.contains_key(&user_id) {
+            user_to_freq_map.insert(user_id, Vec::with_capacity(10));
         }
 
-        let click_traces_list = client_to_freq_map.get_mut(&user_id).unwrap();
+        let traces_list = user_to_freq_map.get_mut(&user_id).unwrap();
 
-        if click_traces_list.is_empty()
-            || click_trace_len >= config.max_click_trace_len
+        if traces_list.is_empty()
+            || trace_len >= config.max_trace_len
             || record.timestamp - prev_time >= config.delay_limit
         {
-            if !click_traces_list.is_empty() {
-                if click_trace_len < config.min_click_trace_len
-                    || click_traces_list.last().unwrap().click_rate > config.max_click_rate
-                    || click_traces_list.last().unwrap().end_time
-                        - click_traces_list.last().unwrap().start_time
-                        > config.max_click_trace_duration
+            if !traces_list.is_empty() {
+                if trace_len < config.min_trace_len
+                    || traces_list.last().unwrap().end_time
+                        - traces_list.last().unwrap().start_time
+                        > config.max_trace_duration
                 {
-                    click_traces_list.pop();
+                    traces_list.pop();
                 }
             }
 
-            let click_trace = FreqClickTrace {
+            let trace = FreqTrace {
                 url: HashMap::new(),
                 domain: HashMap::new(),
                 category: HashMap::new(),
@@ -124,15 +116,14 @@ pub fn parse_to_frequency(
                 day: maths::zeros_u32(7),
                 start_time: record.timestamp,
                 end_time: record.timestamp,
-                click_rate: 0.0,
                 age: record.age,
                 gender: record.gender,
             };
-            click_traces_list.push(click_trace);
-            click_trace_len = 0;
+            traces_list.push(trace);
+            trace_len = 0;
         }
 
-        let current_click_trace = click_traces_list.last_mut().unwrap();
+        let current_trace = traces_list.last_mut().unwrap();
 
         // Extract day and hour from unix timestamp
         let date = UNIX_EPOCH + Duration::from_secs_f64(record.timestamp.clone());
@@ -142,57 +133,57 @@ pub fn parse_to_frequency(
         let hour_index: usize = usize::try_from(datetime.hour()).unwrap();
         let day_index: usize = usize::try_from(datetime.weekday().num_days_from_monday()).unwrap();
 
-        current_click_trace.hour[hour_index] += 1;
-        current_click_trace.day[day_index] += 1;
-        current_click_trace.end_time = record.timestamp;
-        current_click_trace.click_rate = click_trace_len as f64
-            / (current_click_trace.end_time - current_click_trace.start_time);
+        current_trace.hour[hour_index] += 1;
+        current_trace.day[day_index] += 1;
+        current_trace.end_time = record.timestamp;
 
-        *current_click_trace
+        *current_trace
             .url
             .entry(record.url.clone())
             .or_insert(0) += 1;
-        *current_click_trace
+        *current_trace
             .domain
             .entry(record.domain.clone())
             .or_insert(0) += 1;
-        *current_click_trace
+        *current_trace
             .category
             .entry(record.category.clone())
             .or_insert(0) += 1;
 
         prev_time = record.timestamp;
         prev_user = record.user_id;
-        click_trace_len += 1;
+        trace_len += 1;
     }
 
-    // Remove any client with less than the minimum number of click traces
+    // Remove any client with less than the minimum number of traces
     log::info!(
         "Numer of clients before filtering: {:?}",
-        client_to_freq_map.keys().len()
+        user_to_freq_map.keys().len()
     );
-    client_to_freq_map.retain(|_, value| value.len() >= config.min_num_click_traces);
+    user_to_freq_map.retain(|_, value| value.len() >= config.min_num_traces);
     log::info!(
         "Number of clients after filtering: {:?}",
-        client_to_freq_map.keys().len()
+        user_to_freq_map.keys().len()
     );
-    let total_num_click_traces: usize = client_to_freq_map.iter().map(|(_, val)| val.len()).sum();
+    let total_num_traces: usize = user_to_freq_map.iter().map(|(_, val)| val.len()).sum();
     log::info!(
         "Total number of mobility traces: {:?}",
-        total_num_click_traces
+        total_num_traces
     );
-    Ok(client_to_freq_map)
+    Ok(user_to_freq_map)
 }
 
+
+/// Parses the raw data into a convenient tree map for the sequence aligment-based approach.
 pub fn parse_to_sequence(
     config: &Config,
-) -> Result<BTreeMap<u32, Vec<SeqClickTrace>>, Box<dyn Error>> {
+) -> Result<BTreeMap<u32, Vec<SeqTrace>>, Box<dyn Error>> {
     let mut prev_time: f64 = 0.0;
     let mut prev_user = String::new();
-    let mut click_trace_len: usize = 0;
+    let mut trace_len: usize = 0;
     let mut user_id: u32 = 0;
 
-    let mut user_to_seq_map: BTreeMap<u32, Vec<SeqClickTrace>> = BTreeMap::new();
+    let mut user_to_seq_map: BTreeMap<u32, Vec<SeqTrace>> = BTreeMap::new();
     let mut reader = csv::Reader::from_path(&config.path)?;
 
     let mut url_set: IndexSet<String> = IndexSet::new();
@@ -203,11 +194,11 @@ pub fn parse_to_sequence(
         let record: Record = result?;
 
         if prev_user != record.user_id && !prev_user.is_empty() {
-            // Check last mobility trace added to previous client
-            let prev_click_traces_list = user_to_seq_map.get_mut(&user_id).unwrap();
-            if !prev_click_traces_list.is_empty() {
-                if click_trace_len < config.min_click_trace_len {
-                    prev_click_traces_list.pop();
+            // Check last mobility trace added to previous user
+            let prev_traces_list = user_to_seq_map.get_mut(&user_id).unwrap();
+            if !prev_traces_list.is_empty() {
+                if trace_len < config.min_trace_len {
+                    prev_traces_list.pop();
                 }
             }
             user_id += 1;
@@ -217,24 +208,23 @@ pub fn parse_to_sequence(
             user_to_seq_map.insert(user_id, Vec::with_capacity(10));
         }
 
-        let click_traces_list = user_to_seq_map.get_mut(&user_id).unwrap();
+        let traces_list = user_to_seq_map.get_mut(&user_id).unwrap();
 
-        if click_traces_list.is_empty()
-            || click_trace_len >= config.max_click_trace_len
+        if traces_list.is_empty()
+            || trace_len >= config.max_trace_len
             || record.timestamp - prev_time >= config.delay_limit
         {
-            if !click_traces_list.is_empty() {
-                if click_trace_len < config.min_click_trace_len
-                    || click_traces_list.last().unwrap().click_rate > config.max_click_rate
-                    || click_traces_list.last().unwrap().end_time
-                        - click_traces_list.last().unwrap().start_time
-                        > config.max_click_trace_duration
+            if !traces_list.is_empty() {
+                if trace_len < config.min_trace_len
+                    || traces_list.last().unwrap().end_time
+                        - traces_list.last().unwrap().start_time
+                        > config.max_trace_duration
                 {
-                    click_traces_list.pop();
+                    traces_list.pop();
                 }
             }
 
-            let click_trace = SeqClickTrace {
+            let trace = SeqTrace {
                 url: Vec::with_capacity(10),
                 domain: Vec::with_capacity(10),
                 category: Vec::with_capacity(10),
@@ -242,15 +232,14 @@ pub fn parse_to_sequence(
                 day: 0,
                 start_time: record.timestamp,
                 end_time: record.timestamp,
-                click_rate: 0.0,
                 age: record.age,
                 gender: record.gender,
             };
-            click_traces_list.push(click_trace);
-            click_trace_len = 0;
+            traces_list.push(trace);
+            trace_len = 0;
         }
 
-        let current_click_trace = click_traces_list.last_mut().unwrap();
+        let current_trace = traces_list.last_mut().unwrap();
 
         // Extract day and hour from unix timestamp
         let date = UNIX_EPOCH + Duration::from_secs_f64(record.timestamp.clone());
@@ -260,44 +249,39 @@ pub fn parse_to_sequence(
         domain_set.insert(record.domain.clone());
         category_set.insert(record.category.clone());
 
-        current_click_trace.hour.push(datetime.hour());
-        current_click_trace.day = datetime.weekday().num_days_from_monday();
-        current_click_trace.end_time = record.timestamp;
-        current_click_trace.click_rate = click_trace_len as f64
-            / (current_click_trace.end_time - current_click_trace.start_time);
+        current_trace.hour.push(datetime.hour());
+        current_trace.day = datetime.weekday().num_days_from_monday();
+        current_trace.end_time = record.timestamp;
 
-        current_click_trace
+        current_trace
             .url
             .push(u32::try_from(url_set.get_full(&record.url).unwrap().0).unwrap());
-        current_click_trace
+        current_trace
             .domain
             .push(u32::try_from(domain_set.get_full(&record.domain).unwrap().0).unwrap());
-        current_click_trace
+        current_trace
             .category
             .push(u32::try_from(category_set.get_full(&record.category).unwrap().0).unwrap());
 
         prev_time = record.timestamp;
         prev_user = record.user_id;
-        click_trace_len += 1;
+        trace_len += 1;
     }
 
-    // Remove any client with less than the minimum number of click traces
+    // Remove any client with less than the minimum number of traces
     log::info!(
         "Number of clients before filtering: {:?}",
         user_to_seq_map.keys().len()
     );
-    user_to_seq_map.retain(|_, value| value.len() >= config.min_num_click_traces);
+    user_to_seq_map.retain(|_, value| value.len() >= config.min_num_traces);
     log::info!(
         "Number of clients after filtering: {:?}",
         user_to_seq_map.keys().len()
     );
-    let total_num_click_traces: usize = user_to_seq_map.iter().map(|(_, val)| val.len()).sum();
+    let total_num_traces: usize = user_to_seq_map.iter().map(|(_, val)| val.len()).sum();
     log::info!(
         "Total number of mobility traces: {:?}",
-        total_num_click_traces
+        total_num_traces
     );
-    log::info!("Number of unique domain values: {:?}", domain_set.len());
-    log::info!("Number of unique url values: {:?}", url_set.len());
-    log::info!("Number of unique category values: {:?}", category_set.len());
     Ok(user_to_seq_map)
 }

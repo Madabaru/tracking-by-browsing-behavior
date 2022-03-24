@@ -1,2 +1,2 @@
-pub mod click_trace;
+pub mod trace;
 pub mod evaluation;

@@ -1,7 +1,7 @@
 use crate::cli;
 use crate::frequency::{
-    click_trace,
-    click_trace::{FreqClickTrace, VectFreqClickTrace},
+    trace,
+    trace::{FreqTrace, VectFreqTrace},
     metrics,
     metrics::DistanceMetric,
 };
@@ -17,23 +17,27 @@ use std::{
     str::FromStr,
 };
 
+/// Runs the evaluation by conducting a specified number of linkage attacks that are
+/// independent from each other. The traces are compared using the histogram-based approach.
+/// 
+/// Due to the independence, the linkage attacks can be performed in parallel. 
 pub fn eval(
     config: &cli::Config,
-    client_to_freq_map: &BTreeMap<u32, Vec<FreqClickTrace>>,
-    client_to_target_idx_map: &HashMap<u32, Vec<usize>>,
-    client_to_sample_idx_map: &HashMap<u32, Vec<usize>>,
-    client_to_test_idx_map: &HashMap<u32, usize>,
+    user_to_freq_map: &BTreeMap<u32, Vec<FreqTrace>>,
+    user_to_target_idx_map: &HashMap<u32, Vec<usize>>,
+    user_to_sample_idx_map: &HashMap<u32, Vec<usize>>,
+    user_to_test_idx_map: &HashMap<u32, usize>,
 ) {
-    let nested_result_list: Vec<Vec<(bool, bool, bool)>> = client_to_target_idx_map
+    let nested_result_list: Vec<Vec<(bool, bool, bool)>> = user_to_target_idx_map
         .par_iter()
-        .map(|(client_target, target_idx_list)| {
+        .map(|(user_target, target_idx_list)| {
             eval_step(
                 config,
-                client_target,
+                user_target,
                 &target_idx_list,
-                &client_to_freq_map,
-                &client_to_sample_idx_map,
-                &client_to_test_idx_map,
+                &user_to_freq_map,
+                &user_to_sample_idx_map,
+                &user_to_test_idx_map,
             )
         })
         .collect();
@@ -84,26 +88,30 @@ pub fn eval(
     .expect("Error writing to evaluation file.");
 }
 
-
+/// Runs the evaluation by conducting a specified number of linkage attacks that are
+/// dependent from each other. The traces are compared using the histogram-based approach.
+/// 
+/// The linkage attacks are dependent on each other as the attacker makes use of information acquired when
+/// performing a successful linkage attack. The adversary leverages the information in subsequent attacks.
 pub fn eval_dependent(
     config: &cli::Config,
-    client_to_freq_map: &BTreeMap<u32, Vec<FreqClickTrace>>,
-    client_to_target_idx_map: &HashMap<u32, Vec<usize>>,
-    client_to_sample_idx_map: &mut HashMap<u32, Vec<usize>>
+    user_to_freq_map: &BTreeMap<u32, Vec<FreqTrace>>,
+    user_to_target_idx_map: &HashMap<u32, Vec<usize>>,
+    user_to_sample_idx_map: &mut HashMap<u32, Vec<usize>>,
 ) {
-    let nested_result_list: Vec<Vec<(bool, bool, bool)>> = client_to_target_idx_map
+    let nested_result_list: Vec<Vec<(bool, bool, bool)>> = user_to_target_idx_map
         .iter()
-        .map(|(client_target, target_idx_list)| {
+        .map(|(user_target, target_idx_list)| {
             eval_step_dependent(
                 config,
-                client_target,
+                user_target,
                 &target_idx_list,
-                &client_to_freq_map,
-                client_to_sample_idx_map,
+                &user_to_freq_map,
+                user_to_sample_idx_map,
             )
         })
         .collect();
-    
+
     let result_list = utils::flatten(nested_result_list);
     let mut top_1_list: Vec<f64> = Vec::with_capacity(result_list.len());
     let mut top_10_list: Vec<f64> = Vec::with_capacity(result_list.len());
@@ -150,58 +158,58 @@ pub fn eval_dependent(
     .expect("Error writing to evaluation file.");
 }
 
-
+/// Performs a single independent linkage attack.
 fn eval_step(
     config: &cli::Config,
-    client_target: &u32,
+    user_target: &u32,
     target_idx_list: &Vec<usize>,
-    client_to_freq_map: &BTreeMap<u32, Vec<FreqClickTrace>>,
-    client_to_sample_idx_map: &HashMap<u32, Vec<usize>>,
-    client_to_test_idx_map: &HashMap<u32, usize>,
+    user_to_freq_map: &BTreeMap<u32, Vec<FreqTrace>>,
+    user_to_sample_idx_map: &HashMap<u32, Vec<usize>>,
+    user_to_test_idx_map: &HashMap<u32, usize>,
 ) -> Vec<(bool, bool, bool)> {
-    
     let metric = DistanceMetric::from_str(&config.metric).unwrap();
     let mut result_tuples_list: Vec<(bool, bool, bool)> = Vec::with_capacity(target_idx_list.len());
     let mut result_map: HashMap<u32, OrderedFloat<f64>> = HashMap::new();
 
     for target_idx in target_idx_list.into_iter() {
-        let target_click_trace = client_to_freq_map
-            .get(client_target)
+        let target_trace = user_to_freq_map
+            .get(user_target)
             .unwrap()
             .get(*target_idx)
             .unwrap();
 
-        let mut result_tuples: Vec<(u32, OrderedFloat<f64>)> = Vec::with_capacity(client_to_freq_map.len());
+        let mut result_tuples: Vec<(u32, OrderedFloat<f64>)> =
+            Vec::with_capacity(user_to_freq_map.len());
 
-        for (client, click_traces) in client_to_freq_map.into_iter() {
-            let samples_idx = client_to_sample_idx_map.get(client).unwrap();
-            let sampled_click_traces: Vec<FreqClickTrace> = samples_idx
+        for (client, traces) in user_to_freq_map.into_iter() {
+            let samples_idx = user_to_sample_idx_map.get(client).unwrap();
+            let sampled_traces: Vec<FreqTrace> = samples_idx
                 .into_iter()
-                .map(|idx| click_traces.get(*idx).unwrap().clone())
+                .map(|idx| traces.get(*idx).unwrap().clone())
                 .collect();
 
             let url_set =
-                get_unique_set(target_click_trace, &sampled_click_traces, &DataFields::Url);
+                get_unique_set(target_trace, &sampled_traces, &DataFields::Url);
             let domain_set = get_unique_set(
-                target_click_trace,
-                &sampled_click_traces,
+                target_trace,
+                &sampled_traces,
                 &DataFields::Domain,
             );
             let category_set = get_unique_set(
-                target_click_trace,
-                &sampled_click_traces,
+                target_trace,
+                &sampled_traces,
                 &DataFields::Category,
             );
             let age_set =
-                get_unique_set(target_click_trace, &sampled_click_traces, &DataFields::Age);
+                get_unique_set(target_trace, &sampled_traces, &DataFields::Age);
             let gender_set = get_unique_set(
-                target_click_trace,
-                &sampled_click_traces,
+                target_trace,
+                &sampled_traces,
                 &DataFields::Gender,
             );
 
-            let vect_target_click_trace = click_trace::vectorize_click_trace(
-                target_click_trace,
+            let vect_target_trace = trace::vectorize_trace(
+                target_trace,
                 &url_set,
                 &domain_set,
                 &category_set,
@@ -210,8 +218,8 @@ fn eval_step(
             );
 
             if config.typical && !config.multiple {
-                let vect_typ_ref_click_trace = click_trace::gen_typical_vect_click_trace(
-                    &sampled_click_traces,
+                let vect_typ_ref_trace = trace::gen_typical_vect_trace(
+                    &sampled_traces,
                     &url_set,
                     &domain_set,
                     &category_set,
@@ -221,15 +229,14 @@ fn eval_step(
                 let dist = compute_dist(
                     &config.fields,
                     &metric,
-                    &vect_target_click_trace,
-                    &vect_typ_ref_click_trace,
+                    &vect_target_trace,
+                    &vect_typ_ref_trace,
                 );
                 result_tuples.push((client.clone(), OrderedFloat(dist)));
-            
             } else if !config.typical && !config.multiple {
-                for click_trace in sampled_click_traces.into_iter() {
-                    let vect_ref_click_trace = click_trace::vectorize_click_trace(
-                        &click_trace,
+                for trace in sampled_traces.into_iter() {
+                    let vect_ref_trace = trace::vectorize_trace(
+                        &trace,
                         &url_set,
                         &domain_set,
                         &category_set,
@@ -239,16 +246,16 @@ fn eval_step(
                     let dist = compute_dist(
                         &config.fields,
                         &metric,
-                        &vect_target_click_trace,
-                        &vect_ref_click_trace,
+                        &vect_target_trace,
+                        &vect_ref_trace,
                     );
                     result_tuples.push((client.clone(), OrderedFloat(dist)));
                 }
             } else {
-                let test_idx: usize = client_to_test_idx_map.get(client).unwrap().clone();
-                let click_trace: FreqClickTrace = click_traces.get(test_idx).unwrap().clone();
-                let vect_ref_click_trace = click_trace::vectorize_click_trace(
-                    &click_trace,
+                let test_idx: usize = user_to_test_idx_map.get(client).unwrap().clone();
+                let trace: FreqTrace = traces.get(test_idx).unwrap().clone();
+                let vect_ref_trace = trace::vectorize_trace(
+                    &trace,
                     &url_set,
                     &domain_set,
                     &category_set,
@@ -258,8 +265,8 @@ fn eval_step(
                 let dist = compute_dist(
                     &config.fields,
                     &metric,
-                    &vect_target_click_trace,
-                    &vect_ref_click_trace,
+                    &vect_target_trace,
+                    &vect_ref_trace,
                 );
                 *result_map
                     .entry(client.clone())
@@ -269,10 +276,11 @@ fn eval_step(
 
         if !config.multiple {
             result_tuples.sort_unstable_by_key(|k| k.1);
-            let cutoff: usize = (0.1 * client_to_freq_map.len() as f64) as usize;
-            let is_top_10_percent = utils::is_target_in_top_k(client_target, &result_tuples[..cutoff]);
-            let is_top_10: bool = utils::is_target_in_top_k(client_target, &result_tuples[..10]);
-            let is_top_1: bool = client_target.clone() == result_tuples[0].0;
+            let cutoff: usize = (0.1 * user_to_freq_map.len() as f64) as usize;
+            let is_top_10_percent =
+                utils::is_target_in_top_k(user_target, &result_tuples[..cutoff]);
+            let is_top_10: bool = utils::is_target_in_top_k(user_target, &result_tuples[..10]);
+            let is_top_1: bool = user_target.clone() == result_tuples[0].0;
             result_tuples_list.push((is_top_1, is_top_10, is_top_10_percent));
         }
     }
@@ -280,66 +288,65 @@ fn eval_step(
     if config.multiple {
         let mut result_tuples: Vec<(u32, OrderedFloat<f64>)> = result_map.into_iter().collect();
         result_tuples.sort_unstable_by_key(|k| k.1);
-        let cutoff: usize = (0.1 * client_to_freq_map.len() as f64) as usize;
-        let is_top_10_percent = utils::is_target_in_top_k(client_target, &result_tuples[..cutoff]);
-        let is_top_10: bool = utils::is_target_in_top_k(client_target, &result_tuples[..10]);
-        let is_top_1: bool = client_target.clone() == result_tuples[0].0;
+        let cutoff: usize = (0.1 * user_to_freq_map.len() as f64) as usize;
+        let is_top_10_percent = utils::is_target_in_top_k(user_target, &result_tuples[..cutoff]);
+        let is_top_10: bool = utils::is_target_in_top_k(user_target, &result_tuples[..10]);
+        let is_top_1: bool = user_target.clone() == result_tuples[0].0;
         result_tuples_list.push((is_top_1, is_top_10, is_top_10_percent));
     }
     result_tuples_list
 }
 
-
+/// Performs a single dependent linkage attack.
 fn eval_step_dependent(
     config: &cli::Config,
-    client_target: &u32,
+    user_target: &u32,
     target_idx_list: &Vec<usize>,
-    client_to_freq_map: &BTreeMap<u32, Vec<FreqClickTrace>>,
-    client_to_sample_idx_map: &mut HashMap<u32, Vec<usize>>
+    user_to_freq_map: &BTreeMap<u32, Vec<FreqTrace>>,
+    user_to_sample_idx_map: &mut HashMap<u32, Vec<usize>>,
 ) -> Vec<(bool, bool, bool)> {
-
     let metric = DistanceMetric::from_str(&config.metric).unwrap();
     let mut result_tuples_list: Vec<(bool, bool, bool)> = Vec::with_capacity(target_idx_list.len());
 
     for target_idx in target_idx_list.into_iter() {
+        let mut result_tuples: Vec<(u32, OrderedFloat<f64>)> =
+            Vec::with_capacity(user_to_freq_map.len());
 
-        let mut result_tuples: Vec<(u32, OrderedFloat<f64>)> = Vec::with_capacity(client_to_freq_map.len());
-
-        let target_click_trace = client_to_freq_map
-            .get(client_target)
+        let target_trace = user_to_freq_map
+            .get(user_target)
             .unwrap()
             .get(*target_idx)
             .unwrap();
 
-        for (client, click_traces) in client_to_freq_map.into_iter() {
-            let samples_idx = client_to_sample_idx_map.get(client).unwrap();
-            let sampled_click_traces: Vec<FreqClickTrace> = samples_idx
+        for (client, traces) in user_to_freq_map.into_iter() {
+            let samples_idx = user_to_sample_idx_map.get(client).unwrap();
+            let sampled_traces: Vec<FreqTrace> = samples_idx
                 .into_iter()
-                .map(|idx| click_traces.get(*idx).unwrap().clone())
+                .map(|idx| traces.get(*idx).unwrap().clone())
                 .collect();
 
             let url_set =
-                get_unique_set(target_click_trace, &sampled_click_traces, &DataFields::Url);
+                get_unique_set(target_trace, &sampled_traces, &DataFields::Url);
             let domain_set = get_unique_set(
-                target_click_trace,
-                &sampled_click_traces,
+                target_trace,
+                &sampled_traces,
                 &DataFields::Domain,
             );
             let category_set = get_unique_set(
-                target_click_trace,
-                &sampled_click_traces,
+                target_trace,
+                &sampled_traces,
                 &DataFields::Category,
             );
             let age_set =
-                get_unique_set(target_click_trace, &sampled_click_traces, &DataFields::Age);
+                get_unique_set(target_trace, &sampled_traces, &DataFields::Age);
             let gender_set = get_unique_set(
-                target_click_trace,
-                &sampled_click_traces,
+                target_trace,
+                &sampled_traces,
                 &DataFields::Gender,
             );
 
-            let vect_target_click_trace = click_trace::vectorize_click_trace(
-                target_click_trace,
+            let vect_target_trace = trace::vectorize_trace(
+                target_trace,
                 &url_set,
                 &domain_set,
                 &category_set,
@@ -347,9 +354,9 @@ fn eval_step_dependent(
                 &gender_set,
             );
 
-            for click_trace in sampled_click_traces.into_iter() {
-                let vect_ref_click_trace = click_trace::vectorize_click_trace(
-                    &click_trace,
+            for trace in sampled_traces.into_iter() {
+                let vect_ref_trace = trace::vectorize_trace(
+                    &trace,
                     &url_set,
                     &domain_set,
                     &category_set,
@@ -359,8 +366,8 @@ fn eval_step_dependent(
                 let dist = compute_dist(
                     &config.fields,
                     &metric,
-                    &vect_target_click_trace,
-                    &vect_ref_click_trace,
+                    &vect_target_trace,
+                    &vect_ref_trace,
                 );
                 result_tuples.push((client.clone(), OrderedFloat(dist)));
             }
@@ -368,28 +375,27 @@ fn eval_step_dependent(
         // Decide whether the linkage attack is successful based on simple heuristic
         result_tuples.sort_unstable_by_key(|k| k.1);
         let significant = utils::is_significant(&result_tuples);
-        
+
         if significant {
-            let sample_idx_list = client_to_sample_idx_map.get_mut(client_target).unwrap();
+            let sample_idx_list = user_to_sample_idx_map.get_mut(user_target).unwrap();
             sample_idx_list.push(*target_idx);
         }
 
-        let cutoff: usize = (0.1 * client_to_freq_map.len() as f64) as usize;
-        let is_top_10_percent = utils::is_target_in_top_k(client_target, &result_tuples[..cutoff]);
-        let is_top_10: bool = utils::is_target_in_top_k(client_target, &result_tuples[..10]);
-        let is_top_1: bool = client_target.clone() == result_tuples[0].0;
+        let cutoff: usize = (0.1 * user_to_freq_map.len() as f64) as usize;
+        let is_top_10_percent = utils::is_target_in_top_k(user_target, &result_tuples[..cutoff]);
+        let is_top_10: bool = utils::is_target_in_top_k(user_target, &result_tuples[..10]);
+        let is_top_1: bool = user_target.clone() == result_tuples[0].0;
         result_tuples_list.push((is_top_1, is_top_10, is_top_10_percent));
     }
     result_tuples_list
 }
 
-
-// Calculate the distance between the target and the reference click trace
+/// Calculates the distance between the target and the reference trace.
 fn compute_dist<T, U>(
     fields: &Vec<DataFields>,
     metric: &DistanceMetric,
-    target_click_trace: &VectFreqClickTrace<T>,
-    ref_click_trace: &VectFreqClickTrace<U>,
+    target_trace: &VectFreqTrace<T>,
+    ref_trace: &VectFreqTrace<U>,
 ) -> f64
 where
     T: Clone
@@ -411,29 +417,25 @@ where
     // Iterate over all data fields that are considered
     for field in fields.into_iter() {
         let (target_vector, ref_vector) = match field {
-            DataFields::Url => (target_click_trace.url.clone(), ref_click_trace.url.clone()),
+            DataFields::Url => (target_trace.url.clone(), ref_trace.url.clone()),
             DataFields::Domain => (
-                target_click_trace.domain.clone(),
-                ref_click_trace.domain.clone(),
+                target_trace.domain.clone(),
+                ref_trace.domain.clone(),
             ),
             DataFields::Category => (
-                target_click_trace.category.clone(),
-                ref_click_trace.category.clone(),
+                target_trace.category.clone(),
+                ref_trace.category.clone(),
             ),
-            DataFields::Day => (target_click_trace.day.clone(), ref_click_trace.day.clone()),
+            DataFields::Day => (target_trace.day.clone(), ref_trace.day.clone()),
             DataFields::Hour => (
-                target_click_trace.hour.clone(),
-                ref_click_trace.hour.clone(),
+                target_trace.hour.clone(),
+                ref_trace.hour.clone(),
             ),
             DataFields::Gender => (
-                target_click_trace.gender.clone(),
-                ref_click_trace.gender.clone(),
+                target_trace.gender.clone(),
+                ref_trace.gender.clone(),
             ),
-            DataFields::Age => (target_click_trace.age.clone(), ref_click_trace.age.clone()),
-            DataFields::ClickRate => (
-                target_click_trace.click_rate.clone(),
-                ref_click_trace.click_rate.clone(),
-            ),
+            DataFields::Age => (target_trace.age.clone(), ref_trace.age.clone()),
             _ => panic!("Error: unknown data field supplied: {}", field),
         };
 
@@ -462,27 +464,28 @@ where
     avg_dist
 }
 
+/// Retrieves the set of unique values for a given target trace and sampled traces and a specific data field.
 pub fn get_unique_set(
-    target_click_trace: &FreqClickTrace,
-    sampled_click_traces: &Vec<FreqClickTrace>,
+    target_trace: &FreqTrace,
+    sampled_traces: &Vec<FreqTrace>,
     field: &DataFields,
 ) -> IndexSet<String> {
     let mut vector: Vec<String> = match field {
-        DataFields::Url => target_click_trace.url.keys().cloned().collect(),
-        DataFields::Domain => target_click_trace.domain.keys().cloned().collect(),
-        DataFields::Category => target_click_trace.category.keys().cloned().collect(),
-        DataFields::Age => Vec::from([target_click_trace.age.clone()]),
-        DataFields::Gender => Vec::from([target_click_trace.gender.clone()]),
+        DataFields::Url => target_trace.url.keys().cloned().collect(),
+        DataFields::Domain => target_trace.domain.keys().cloned().collect(),
+        DataFields::Category => target_trace.category.keys().cloned().collect(),
+        DataFields::Age => Vec::from([target_trace.age.clone()]),
+        DataFields::Gender => Vec::from([target_trace.gender.clone()]),
         _ => panic!("Error: unknown data field supplied: {}", field),
     };
 
-    for click_trace in sampled_click_traces.into_iter() {
+    for trace in sampled_traces.into_iter() {
         match field {
-            DataFields::Url => vector.extend(click_trace.url.keys().cloned()),
-            DataFields::Domain => vector.extend(click_trace.domain.keys().cloned()),
-            DataFields::Category => vector.extend(click_trace.category.keys().cloned()),
-            DataFields::Age => vector.push(click_trace.age.clone()),
-            DataFields::Gender => vector.push(click_trace.gender.clone()),
+            DataFields::Url => vector.extend(trace.url.keys().cloned()),
+            DataFields::Domain => vector.extend(trace.domain.keys().cloned()),
+            DataFields::Category => vector.extend(trace.category.keys().cloned()),
+            DataFields::Age => vector.push(trace.age.clone()),
+            DataFields::Gender => vector.push(trace.gender.clone()),
             _ => panic!("Error: unknown data field supplied: {}", field),
         }
     }
