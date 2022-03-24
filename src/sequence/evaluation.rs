@@ -24,10 +24,10 @@ pub fn eval(
 ) {
     let nested_result_list: Vec<Vec<(bool, bool, bool)>> = user_to_target_idx_map
         .par_iter()
-        .map(|(client, target_idx_list)| {
+        .map(|(user, target_idx_list)| {
             eval_step(
                 config,
-                client,
+                user,
                 &target_idx_list,
                 &user_to_seq_map,
                 &user_to_sample_idx_map,
@@ -174,8 +174,8 @@ fn eval_step(
         let mut result_tuples: Vec<(u32, OrderedFloat<f64>)> =
             Vec::with_capacity(user_to_seq_map.len());
 
-        for (client, traces) in user_to_seq_map.into_iter() {
-            let samples_idx = user_to_sample_idx_map.get(client).unwrap();
+        for (user, traces) in user_to_seq_map.into_iter() {
+            let samples_idx = user_to_sample_idx_map.get(user).unwrap();
             let sampled_traces: Vec<SeqTrace> = samples_idx
                 .into_iter()
                 .map(|idx| traces.get(*idx).unwrap().clone())
@@ -193,7 +193,7 @@ fn eval_step(
                     &target_trace,
                     &typical_trace,
                 );
-                result_tuples.push((client.clone(), OrderedFloat(score)));
+                result_tuples.push((user.clone(), OrderedFloat(score)));
             } else if !config.typical && !config.multiple {
                 for sample_trace in sampled_traces.into_iter() {
                     let score = compute_alignment_scores(
@@ -204,10 +204,10 @@ fn eval_step(
                         &target_trace,
                         &sample_trace,
                     );
-                    result_tuples.push((client.clone(), OrderedFloat(score)));
+                    result_tuples.push((user.clone(), OrderedFloat(score)));
                 }
             } else {
-                let test_idx: usize = user_to_test_idx_map.get(client).unwrap().clone();
+                let test_idx: usize = user_to_test_idx_map.get(user).unwrap().clone();
                 let trace: SeqTrace = traces.get(test_idx).unwrap().clone();
                 let score = compute_alignment_scores(
                     &config.fields,
@@ -218,7 +218,7 @@ fn eval_step(
                     &trace,
                 );
                 *result_map
-                    .entry(client.clone())
+                    .entry(user.clone())
                     .or_insert(OrderedFloat(0.0)) += OrderedFloat(score);
             }
         }
@@ -266,8 +266,8 @@ fn eval_step_dependent(
         let mut result_tuples: Vec<(u32, OrderedFloat<f64>)> =
             Vec::with_capacity(user_to_seq_map.len());
 
-        for (client, traces) in user_to_seq_map.into_iter() {
-            let samples_idx = user_to_sample_idx_map.get(client).unwrap();
+        for (user, traces) in user_to_seq_map.into_iter() {
+            let samples_idx = user_to_sample_idx_map.get(user).unwrap();
             let sampled_traces: Vec<SeqTrace> = samples_idx
                 .into_iter()
                 .map(|idx| traces.get(*idx).unwrap().clone())
@@ -282,7 +282,7 @@ fn eval_step_dependent(
                     &target_trace,
                     &sample_trace,
                 );
-                result_tuples.push((client.clone(), OrderedFloat(score)));
+                result_tuples.push((user.clone(), OrderedFloat(score)));
             }
         }
 

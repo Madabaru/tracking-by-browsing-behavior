@@ -181,8 +181,8 @@ fn eval_step(
         let mut result_tuples: Vec<(u32, OrderedFloat<f64>)> =
             Vec::with_capacity(user_to_freq_map.len());
 
-        for (client, traces) in user_to_freq_map.into_iter() {
-            let samples_idx = user_to_sample_idx_map.get(client).unwrap();
+        for (user, traces) in user_to_freq_map.into_iter() {
+            let samples_idx = user_to_sample_idx_map.get(user).unwrap();
             let sampled_traces: Vec<FreqTrace> = samples_idx
                 .into_iter()
                 .map(|idx| traces.get(*idx).unwrap().clone())
@@ -232,7 +232,7 @@ fn eval_step(
                     &vect_target_trace,
                     &vect_typ_ref_trace,
                 );
-                result_tuples.push((client.clone(), OrderedFloat(dist)));
+                result_tuples.push((user.clone(), OrderedFloat(dist)));
             } else if !config.typical && !config.multiple {
                 for trace in sampled_traces.into_iter() {
                     let vect_ref_trace = trace::vectorize_trace(
@@ -249,10 +249,10 @@ fn eval_step(
                         &vect_target_trace,
                         &vect_ref_trace,
                     );
-                    result_tuples.push((client.clone(), OrderedFloat(dist)));
+                    result_tuples.push((user.clone(), OrderedFloat(dist)));
                 }
             } else {
-                let test_idx: usize = user_to_test_idx_map.get(client).unwrap().clone();
+                let test_idx: usize = user_to_test_idx_map.get(user).unwrap().clone();
                 let trace: FreqTrace = traces.get(test_idx).unwrap().clone();
                 let vect_ref_trace = trace::vectorize_trace(
                     &trace,
@@ -269,7 +269,7 @@ fn eval_step(
                     &vect_ref_trace,
                 );
                 *result_map
-                    .entry(client.clone())
+                    .entry(user.clone())
                     .or_insert(OrderedFloat(0.0)) += OrderedFloat(dist);
             }
         }
@@ -318,8 +318,8 @@ fn eval_step_dependent(
             .get(*target_idx)
             .unwrap();
 
-        for (client, traces) in user_to_freq_map.into_iter() {
-            let samples_idx = user_to_sample_idx_map.get(client).unwrap();
+        for (user, traces) in user_to_freq_map.into_iter() {
+            let samples_idx = user_to_sample_idx_map.get(user).unwrap();
             let sampled_traces: Vec<FreqTrace> = samples_idx
                 .into_iter()
                 .map(|idx| traces.get(*idx).unwrap().clone())
@@ -369,7 +369,7 @@ fn eval_step_dependent(
                     &vect_target_trace,
                     &vect_ref_trace,
                 );
-                result_tuples.push((client.clone(), OrderedFloat(dist)));
+                result_tuples.push((user.clone(), OrderedFloat(dist)));
             }
         }
         // Decide whether the linkage attack is successful based on simple heuristic

@@ -157,17 +157,17 @@ pub fn parse_to_frequency(
 
     // Remove any client with less than the minimum number of traces
     log::info!(
-        "Numer of clients before filtering: {:?}",
+        "Numer of users before filtering: {:?}",
         user_to_freq_map.keys().len()
     );
     user_to_freq_map.retain(|_, value| value.len() >= config.min_num_traces);
     log::info!(
-        "Number of clients after filtering: {:?}",
+        "Number of users after filtering: {:?}",
         user_to_freq_map.keys().len()
     );
     let total_num_traces: usize = user_to_freq_map.iter().map(|(_, val)| val.len()).sum();
     log::info!(
-        "Total number of mobility traces: {:?}",
+        "Total number of traces: {:?}",
         total_num_traces
     );
     Ok(user_to_freq_map)
@@ -270,17 +270,17 @@ pub fn parse_to_sequence(
 
     // Remove any client with less than the minimum number of traces
     log::info!(
-        "Number of clients before filtering: {:?}",
+        "Number of users before filtering: {:?}",
         user_to_seq_map.keys().len()
     );
     user_to_seq_map.retain(|_, value| value.len() >= config.min_num_traces);
     log::info!(
-        "Number of clients after filtering: {:?}",
+        "Number of users after filtering: {:?}",
         user_to_seq_map.keys().len()
     );
     let total_num_traces: usize = user_to_seq_map.iter().map(|(_, val)| val.len()).sum();
     log::info!(
-        "Total number of mobility traces: {:?}",
+        "Total number of traces: {:?}",
         total_num_traces
     );
     Ok(user_to_seq_map)
