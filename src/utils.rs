@@ -8,7 +8,7 @@ use std::{collections::HashMap, error::Error};
 
 const EVAL_PATH: &str = "tmp/evaluation";
 
-/// Normalizes the values of a given vector
+/// Normalizes the values of a given vector.
 pub fn normalize_vector(vector: &mut [f64]) {
     let norm = vector.iter().map(|x| *x * *x).sum::<f64>().sqrt();
     if norm > 0. {

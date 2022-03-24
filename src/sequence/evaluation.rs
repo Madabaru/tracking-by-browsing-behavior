@@ -304,7 +304,7 @@ fn eval_step_dependent(
     result_tuples_list
 }
 
-/// Calculates the distance between the target and the reference trace.
+/// Calculates the alignment score between the target and the reference trace.
 fn compute_alignment_scores(
     fields: &Vec<DataFields>,
     strategy: &str,
