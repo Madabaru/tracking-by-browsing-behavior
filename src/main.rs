@@ -36,7 +36,7 @@ fn main() {
         let user_to_seq_map: BTreeMap<u32, Vec<SeqTrace>> =
             parse::parse_to_sequence(&config).unwrap();
 
-        log::info!("Sampling clients...");
+        log::info!("Sampling users...");
         let user_to_target_idx_map: HashMap<u32, Vec<usize>> =
             sample::gen_user_to_target_idx_map(
                 &user_to_seq_map,
@@ -45,7 +45,7 @@ fn main() {
                 config.target_trace_sample_size,
             );
 
-        log::info!("Sampling click traces per client...");
+        log::info!("Sampling traces per user...");
         let mut user_to_sample_idx_map: HashMap<u32, Vec<usize>> =
             sample::gen_user_to_sample_idx_map(
                 &user_to_seq_map,
@@ -53,7 +53,7 @@ fn main() {
                 config.trace_sample_size,
             );
 
-        log::info!("Sampling test click traces per client...");
+        log::info!("Sampling test traces per user...");
         let user_to_test_idx_map: HashMap<u32, usize> =
             sample::gen_user_to_test_idx_map(&user_to_sample_idx_map, &mut rng);
 
@@ -82,7 +82,7 @@ fn main() {
         let user_to_freq_map: BTreeMap<u32, Vec<FreqTrace>> =
             parse::parse_to_frequency(&config).unwrap();
 
-        log::info!("Sampling a single target click trace per client...");
+        log::info!("Sampling a single target trace per user...");
         let user_to_target_idx_map: HashMap<u32, Vec<usize>> =
             sample::gen_user_to_target_idx_map(
                 &user_to_freq_map,
@@ -91,7 +91,7 @@ fn main() {
                 config.target_trace_sample_size,
             );
 
-        log::info!("Sampling click traces per client...");
+        log::info!("Sampling traces per user...");
         let mut user_to_sample_idx_map: HashMap<u32, Vec<usize>> =
             sample::gen_user_to_sample_idx_map(
                 &user_to_freq_map,
@@ -99,7 +99,7 @@ fn main() {
                 config.trace_sample_size,
             );
 
-        log::info!("Sampling test click traces per client...");
+        log::info!("Sampling test traces per user...");
         let user_to_test_idx_map: HashMap<u32, usize> =
             sample::gen_user_to_test_idx_map(&user_to_sample_idx_map, &mut rng);
 
